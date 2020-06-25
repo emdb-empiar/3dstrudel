@@ -78,7 +78,7 @@ def atom_inclusion(structure, map_object, threshold, ignore_atoms=()):
     return included, not_included, fraction
 
 
-def find_threshold(structure, map_object, inclusion_fraction, delta=1):
+def find_threshold(structure, map_object, inclusion_fraction, delta=2):
     """
     Calculates the threshold level for which the specified fraction of atoms is inside the map
     :param map_object:

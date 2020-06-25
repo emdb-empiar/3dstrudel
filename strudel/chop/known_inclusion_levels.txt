@@ -1,1 +1,0 @@
-EMD-10101_sharp_None.mrc  EMD-10101_ref_glob_sharp.cif  90  0.16782045

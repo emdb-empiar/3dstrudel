@@ -36,11 +36,11 @@ from multiprocessing import Process, Array
 from mpi4py import MPI
 from random import shuffle
 
-import configureNew as config
 from strudel.chop.chopMap import ChopMap, MapParser
 import strudel.utils.functions as func
 from strudel.utils import bioUtils
 from strudel.utils import modelMapUtils
+import strudel.lib.strudel.nomenclature as nomenclature
 
 
 # noinspection PyTypeChecker
@@ -58,11 +58,8 @@ class ChopModelMap:
         else:
             self.comm = None
         self.start_time = None
-        # self.cctbx_python = config.CCTBX_PYTHON
-        # self.rscc_script_path = config.RSCC_SCRIPT_PATH
         self.min_rscc = None
-        self.inclusion_fraction = config.INCLUSION_FRACTION
-        self.ignore_charged_check = config.IGNORE_CHARGED_CHECK
+        self.no_charged_check = None
         self.chop_log = None
         self.allowed_b = 0.0
         self.entry_code = ''
@@ -88,26 +85,28 @@ class ChopModelMap:
         self.final_grid = None
         self.chop_radius = None
         self.chop_soft_radius = None
-        self.script_path = os.path.dirname(os.path.abspath(__file__))
-        self.charged_res = ['ARG', 'ASP', 'GLU', 'LYS']
-        self.inclusion_threshold = None
-        self.check_inclusion = None
+        # self.script_path = os.path.dirname(os.path.abspath(__file__))
+        self.charged_res = nomenclature.CHARGED_RESIDUES
+        # self.inclusion_threshold = None
         self.check_b_values = None
-        self.known_inclusion_levels = os.path.join(self.script_path, 'known_inclusion_levels.txt')
+        # self.known_inclusion_levels = os.path.join(self.script_path, 'known_inclusion_levels.txt')
         self.inclusion_charged_tolerance = 3
-        self.heavy_atoms = {'ARG': 11, 'LYS': 9, 'MET': 8, 'GLU': 9, 'GLN': 9, 'ASP': 8, 'ASN': 8,
-                            'ILE': 8, 'LEU': 8, 'HIS': 10, 'TRP': 14, 'TYR': 12, 'PHE': 11, 'PRO': 7,
-                            'THR': 7, 'VAL': 7, 'SER': 6, 'CYS': 6, 'ALA': 5, 'GLY': 4}
+        self.heavy_atoms = nomenclature.HEAVY_ATOMS
 
-    def set_env(self, work_dir, entry_code, model_path, map_path,
-                log_path, rscc_list=None, inclusion_lvl=None,
-                allowed_b=None, inclusion_fraction=90, warning_level='info'):
+    def set_env(self, work_dir,
+                entry_code,
+                model_path,
+                map_path,
+                log_path,
+                rscc_list=None,
+                allowed_b=None,
+                filter_identical_chains=True,
+                warning_level='info'):
         """
         Set the environment for residue (and density map) chopping
         :param warning_level:
         :param inclusion_fraction: fraction of atoms inside the threshold
         :param allowed_b:
-        :param inclusion_lvl:
         :param rscc_list:
         :param log_path:
         :param work_dir: The directory for output files
@@ -125,8 +124,6 @@ class ChopModelMap:
         self.map_file_path = map_path
         self.master_log_path = log_path
         self.rscc_list = rscc_list
-        self.inclusion_threshold = inclusion_lvl
-        self.inclusion_fraction = inclusion_fraction
 
         self.tmp_log_dir = os.path.join(work_dir, 'tmp_log')
         self.create_dir(self.tmp_log_dir)
@@ -149,15 +146,14 @@ class ChopModelMap:
                 self.map_object = MapParser(map_path)
                 self.chop_log.info('Map loaded in: %s', func.report_elapsed(start))
                 self.input_model = bioUtils.load_structure(model_path)
-                self.setup_inclusion_threshold()
-                self.input_model = self.delete_identical_chains(self.input_model)
+                if filter_identical_chains:
+                    self.input_model = self.delete_identical_chains(self.input_model)
             self.input_model = self.comm.bcast(self.input_model, root=0)
-            self.inclusion_threshold = self.comm.bcast(self.inclusion_threshold, root=0)
         else:
             self.map_object = MapParser(map_path)
             self.input_model = bioUtils.load_structure(model_path)
-            self.setup_inclusion_threshold()
-            self.input_model = self.delete_identical_chains(self.input_model)
+            if filter_identical_chains:
+                self.input_model = self.delete_identical_chains(self.input_model)
 
         if allowed_b is None:
             self.allowed_b = self.calc_b_value_cut_off()
@@ -171,7 +167,7 @@ class ChopModelMap:
             self.chop_log.info("Spent on set_paths %s", func.report_elapsed(s_env_t))
 
     def set_map_chop_parameters(self, cube_radius=5.0, final_grid=0.5, chop_radius=3.0, chop_soft_radius=2.0,
-                                check_inclusion=False, check_rscc=True, check_b_values=True, resolution=None):
+                                check_rscc=True, min_rscc=0.7, check_b_values=True, no_charged_check=True):
         """
         Set custom parameters for map chopping
         :param check_b_values:
@@ -183,36 +179,19 @@ class ChopModelMap:
         :param chop_soft_radius: Soft radius around the molecule for map chopping
         :param resolution:
         """
-        set_par_t = time.time()
         self.cube_radius = cube_radius
         self.final_grid = final_grid
         self.chop_radius = chop_radius
         self.chop_soft_radius = chop_soft_radius
-        self.check_inclusion = check_inclusion
         self.check_rscc = check_rscc
+        self.min_rscc = min_rscc
         self.check_b_values = check_b_values
+        self.no_charged_check = no_charged_check
 
         # Set RSCC data
-        if check_rscc:
+        if check_rscc and self.rscc_list is None:
             if self.rank == 0:
-                self.chop_log.info('\nRSCC will be used for local map quality checks')
-            if self.rscc_list is None:
-                if self.rank == 0:
-                    self.chop_log.info('A list of RSCC was not provided\n '
-                                       'Running per residue RSCC calculations using Phenix')
-                if resolution is not None:
-                    if self.parallelism == 'mpi':
-                        if self.rank == 0:
-                            self.rscc_list = self.calculate_rscc(resolution)
-                        self.rscc_list = self.comm.bcast(self.rscc_list, root=0)
-                    else:
-                        self.rscc_list = self.calculate_rscc(resolution)
-                else:
-                    if self.rank == 0:
-                        raise Exception('Please provide the map resolution or a list of per residue RSCC')
-
-        if self.rank == 0:
-            self.chop_log.info("Spent on set_chop_par %s", func.report_elapsed(set_par_t))
+                raise Exception('Please provide the map resolution or a list of per residue RSCC')
 
     def set_out_file_suffixes(self):
         """
@@ -226,34 +205,6 @@ class ChopModelMap:
         self.cube_res_end = '-{}_cube_resampled.mrc'.format(self.entry_code)
         self.soft_map_end = '-{}_soft.mrc'.format(self.entry_code)
         self.hard_map_end = '-{}_hard.mrc'.format(self.entry_code)
-
-    def setup_inclusion_threshold(self):
-        """
-        Sets the threshold level used for atom inclusion calculations
-        """
-        if self.rank == 0:
-            self.chop_log.info('Atom inclusion will be used for local map quality checks.\n')
-        if self.inclusion_threshold is None:
-            if self.rank == 0:
-                self.chop_log.info('The threshold level is chosen such that %s%s of the atoms are inside the map\n',
-                                   self.inclusion_fraction, '%')
-                self.chop_log.info('Searching threshold level')
-            lvl = self.check_known_inclusion_levels(self.inclusion_fraction)
-            if lvl is not None:
-                self.inclusion_threshold = lvl
-            else:
-                start = time.time()
-                self.inclusion_threshold = modelMapUtils.find_threshold(self.input_model,
-                                                                        self.map_object,
-                                                                        self.inclusion_fraction)
-                self.chop_log.info('Found level in : %s', func.report_elapsed(start))
-                self.save_inclusion_level(self.inclusion_fraction)
-            if self.rank == 0:
-                self.chop_log.info('Threshold level = %s', self.inclusion_threshold)
-        else:
-            if self.rank == 0:
-                self.chop_log.info('Atom inclusion will be used for local map quality checks.\n'
-                                   'The threshold level was set by user to: %s\n\n', self.inclusion_threshold)
 
     def delete_identical_chains(self, structure, delta=0.15):
         """
@@ -292,85 +243,6 @@ class ChopModelMap:
             self.chop_log.info("No identical chains were found")
             self.chop_log.info('Elapsed: %s', func.report_elapsed(start))
         return structure
-
-    def calculate_rscc_b(self, resolution):
-        """
-        Calculates average per residue RSCC for the input residue and map
-        :param resolution: resolution
-        :return: RSCC list
-        """
-        if resolution < 4:
-            atom_radius = 2.0
-        else:
-            atom_radius = 2.5
-        out_file = os.path.join(self.work_dir, self.entry_code + '_RSCC.json')
-        rscc_parameters = ' resolution={} atom_radius={} scattering_table=electron'.format(resolution, atom_radius)
-
-        command = '{} {} {} {} {} out_file={}'.format(self.cctbx_python, self.rscc_script_path,
-                                                      self.input_model_path, self.map_file_path,
-                                                      rscc_parameters, out_file)
-
-        subprocess.call(command, shell=True)  # , cwd=self.work_dir)
-        try:
-            with open(out_file, 'r') as j_file:
-                rscc = json.load(j_file)
-                return rscc
-        except FileNotFoundError:
-            if self.rank == 0:
-                self.chop_log.info("RSCC calculations failed")
-            return []
-
-    def calculate_rscc(self, resolution):
-        """
-        Calculates average per residue RSCC for the input residue and map
-        :param resolution: resolution
-        :return: RSCC list
-        """
-        if resolution < 4:
-            atom_radius = 2.0
-        else:
-            atom_radius = 2.5
-        out_file = os.path.join(self.work_dir, self.entry_code + '_RSCC.json')
-        rscc_parameters = ' resolution={} atom_radius={} scattering_table=electron'.format(resolution, atom_radius)
-
-        command = '{} {} {} {} {} out_file={}'.format(self.cctbx_python, self.rscc_script_path,
-                                                      self.input_model_path, self.map_file_path,
-                                                      rscc_parameters, out_file)
-
-        subprocess.call(command, shell=True)
-        try:
-            with open(out_file, 'r') as j_file:
-                rscc = json.load(j_file)
-                return rscc
-        except FileNotFoundError:
-            return None
-
-    def check_known_inclusion_levels(self, inclusion_fraction):
-        """
-        Checks for known threshold levels
-        :param inclusion_fraction: atom inclusion fraction
-        :return: threshold level for the specified atom inclusion fraction
-        """
-        lvl = None
-        with open(self.known_inclusion_levels, 'r') as f:
-            lines = f.readlines()
-            for line in lines:
-                fields = line.split()
-                if os.path.basename(self.map_file_path) in line and os.path.basename(self.input_model_path) in line \
-                        and str(inclusion_fraction) in line:
-                    lvl = float(fields[-1])
-        return lvl
-
-    def save_inclusion_level(self, inclusion_fraction):
-        """
-        Saves the calculated threshold level
-        :param inclusion_fraction:
-        """
-        with open(self.known_inclusion_levels, 'a') as f:
-            line = '{}  {}  {}  {}\n'.format(os.path.basename(self.map_file_path),
-                                             os.path.basename(self.input_model_path),
-                                             inclusion_fraction, self.inclusion_threshold)
-            f.write(line)
 
     @staticmethod
     def get_residue_list(structure, res):
@@ -435,7 +307,6 @@ class ChopModelMap:
         :param chop_map: map dir
         :return: False or True
         """
-        included = True
         good_b = True
         good_rscc = True
         complete = True
@@ -472,21 +343,7 @@ class ChopModelMap:
 
         # Check local map quality based on B-factors and atom inclusion
         if chop_map:
-            # Check atom inclusion
-            if self.check_inclusion:
-                not_included = modelMapUtils.atom_inclusion(residue, self.map_object,
-                                                            self.inclusion_threshold, ['O'])[1]
-                if not_included > 0:
-                    self.chop_log.info('Residue %s %s %s has %s atoms outside map at %s level', res_name,
-                                       res_nr, chain_id, not_included, self.inclusion_threshold)
-                else:
-                    self.chop_log.debug('Residue %s %s %s has %s atoms outside map at %s level', res_name,
-                                        res_nr, chain_id, not_included, self.inclusion_threshold)
-                if res_name not in self.charged_res and not_included > 0:
-                    included = False
-                if res_name in self.charged_res and not_included > self.inclusion_charged_tolerance:
-                    included = False
-            if res_name.upper() not in self.charged_res or not self.ignore_charged_check:
+            if res_name.upper() not in self.charged_res or not self.no_charged_check:
                 # Check B-factors
                 if self.check_b_values:
                     good_b = self.check_b_factors(residue)
@@ -500,7 +357,7 @@ class ChopModelMap:
                                            res_name, res_nr, chain_id, self.min_rscc)
                         good_rscc = False
 
-        if good_rscc and good_b and included and complete and single_conf:
+        if good_rscc and good_b and complete and single_conf:
             return True
         else:
             return False
@@ -756,7 +613,7 @@ class ChopModelMap:
             self.map_object = self.comm.bcast(self.map_object, root=0)
             self.input_model = self.comm.bcast(self.input_model, root=0)
             self.map_file_path = self.comm.bcast(self.map_file_path, root=0)
-            self.inclusion_threshold = self.comm.bcast(self.inclusion_threshold, root=0)
+            # self.inclusion_threshold = self.comm.bcast(self.inclusion_threshold, root=0)
             stat_storage = self.comm.scatter(stat_storage, root=0)
             self.chop_log.info("\nRank: %s spent %s on broadcasting", self.rank, func.report_elapsed(start))
             start = time.time()
@@ -882,3 +739,105 @@ class ChopModelMap:
         except FileExistsError:
             pass
 
+import argparse
+import sys
+
+def main():
+    parser = argparse.ArgumentParser(description='Chops a map and an atomic model into residues and corresponding maps')
+    parser.add_argument("-p", "--pdb_cif", dest="in_model", required=True, help="Input model in pdb or cif format")
+    parser.add_argument("-m", "--map", dest="in_map", required=True, help="Input map")
+
+    parser.add_argument("-o", "--chop_dir", dest="chop_dir", required=True, help="Where to output the generated files")
+    parser.add_argument("-c", "--chop_par", dest="chop_par", nargs='*', required=False,
+                        help="Chopping parameters. Example: cube_radius=4 final_grid=0.5 chop_radius=2.0 "
+                             "chop_soft_radius=1.0 inclusion_fraction=90 chop_map=True chopping_mode=soft "
+                             "check_rscc=True")
+    parser.add_argument("-r", "--rscc_file", dest="rscc_file", required=False,
+                        help='Per residue RSCC values in json format EX: [ ["A", "MET", "1", 0.827],..]')
+    parser.add_argument("-re", "--resolution", dest="res", required=False,
+                        help="Map resolution required if RSCC were not provided")
+    parser.add_argument("-rl", "--residue_list", dest="res_list", required=False, nargs='*',
+                        help="Residue names to be chopped Ex: ASP ARG ..")
+    parser.add_argument("-np", "--n_processors", dest="np", required=False,
+                        help="Number of processors in chopping mode")
+    parser.add_argument("-mpi", "--mpi", dest="mpi", action='store_true',
+                        help="Use distributed memory parallelism")
+    parser.add_argument("-filter_chain", "--filter_chain", dest="filter", action='store_true', default=False,
+                        help="Do not chop identical chains")
+
+    default_parameters = {"cube_radius": 4, "final_grid": 0.25, "chop_radius": 2.0, "chop_soft_radius": 1.0,
+                          "chop_map": True, "chopping_mode": "soft", "check_rscc": True}
+    args = parser.parse_args()
+    if args.mpi:
+        sys.excepthook = func.global_except_hook
+        comm = MPI.COMM_WORLD
+        size = comm.Get_size()
+        rank = comm.Get_rank()
+    else:
+        rank = 0
+        size = 1
+
+    #config = Configure()
+    chop = ChopModelMap(rank, parallelism='mpi')
+    chop_dir = args.chop_dir
+
+    if args.rscc_file:
+        with open(args.rscc_file, 'r') as j:
+            rscc_list = json.load(j)
+    else:
+        rscc_list = None
+
+    # Set chopping parameters
+    parameters = {}
+    if args.chop_par:
+        for parameter in args.chop_par:
+            pair = parameter.split('=')
+            if pair[1].lower == 'true':
+                pair[1] = True
+            if pair[1].lower() == 'false':
+                pair[1] = False
+            if pair[0] not in ['chop_map', 'chopping_mod', 'check_rscc', 'chop_map']:
+                pair[1] = float(pair[1])
+            parameters[pair[0]] = pair[1]
+
+        for key, value in default_parameters.items():
+            if key not in parameters.keys():
+                parameters[key] = value
+    else:
+        parameters = default_parameters
+
+    if args.res_list:
+        res_list = args.res_list
+    else:
+        res_list = nomenclature.AA_RESIDUES_LIST
+
+    if args.np:
+        np = args.np
+    else:
+        np = 2
+    if args.res:
+        args.res = float(args.res)
+
+    model_name = os.path.basename(args.in_model).split('.')[0]
+    map_name = os.path.basename(args.in_map).split('.')[0]
+    name = str(model_name) + '-' + str(map_name)
+    log_path = os.path.join(chop_dir, 'chop_' + name + '.log')
+
+    chop.set_env(args.chop_dir, name, args.in_model, args.in_map, log_path,
+                 rscc_list=rscc_list,
+                 allowed_b=None,
+                 warning_level='debug',
+                 filter_identical_chains=args.filter)
+    chop.set_map_chop_parameters(cube_radius=parameters["cube_radius"],
+                                 final_grid=parameters["final_grid"],
+                                 chop_radius=parameters["chop_radius"],
+                                 chop_soft_radius=parameters["chop_soft_radius"],
+                                 check_rscc=parameters["check_rscc"],
+                                 )
+
+    statistics = chop.chop_model_map_parallel(res_list, chop_map=parameters["chop_map"],
+                                              chopping_mode='soft',
+                                              nr_cores=size)
+
+if __name__ == '__main__':
+    main()
