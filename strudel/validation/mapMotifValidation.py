@@ -1,3 +1,21 @@
+"""
+mapMotifValidation.py
+
+This module runs map versus amino acid residues map motif library validation.
+
+Copyright [2013] EMBL - European Bioinformatics Institute
+Licensed under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in
+compliance with the License. You may obtain a copy of
+the License at
+http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on
+an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied. See the License for the
+specific language governing permissions and limitations
+under the License.
+"""
 
 __author__ = 'Andrei Istrate'
 __email__ = 'andrei@ebi.ac.uk'
@@ -27,6 +45,9 @@ log = logging.getLogger(__name__)
 
 
 class DictKeys:
+    """
+    Class for storing the fields names in the output csv file
+    """
     RES_TYPE = 'residue_type'
     RES_NR = 'residue_nr'
     CHAIN = 'chain'
@@ -50,175 +71,190 @@ class DictKeys:
     COMPLETE_DATA = 'complete_data'
 
 
-class Utils:
-    @staticmethod
-    def json_to_full_csv(json_path, csv_path):
-        k = DictKeys()
-        with open(json_path) as j:
-            data = json.load(j)
+def dict_list_to_csv(dict_list, csv_path):
+    """
+    Dumps a list of dictionaries with identical keys to a csv file
+    :param dict_list: list of dictionaries
+    :param csv_path: path
+    """
+    with open(csv_path, mode='w') as csv_file:
+        fieldnames = [key for key in dict_list[0].keys()]
+        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+        writer.writeheader()
+        for item in dict_list:
+            writer.writerow(item)
 
-        out_data = []
-        for item in data:
+
+def json_to_full_csv(json_path, csv_path):
+    """
+    Converts validation json output file to csv format
+    :param json_path: input json file path
+    :param csv_path: output csv path
+    """
+    k = DictKeys()
+    with open(json_path) as j:
+        data = json.load(j)
+
+    out_data = []
+    for item in data:
+        tmp = {}
+        for key, value in item.items():
+            if key != k.SCORES:
+                tmp[key] = value
+            else:
+                for el in value:
+                    tmp[el[0]] = el[1]
+        out_data.append(tmp)
+
+    dict_list_to_csv(out_data, csv_path)
+
+
+def csv_to_top_csv(csv_path, out_csv_path):
+    """
+    Prepares the input file for Strudel Score tool.
+    Keeps only the top scoring motif data for each residue type
+    :param csv_path: input scv file path
+    :param out_csv_path: output scv file path
+    """
+    data_frame = []
+    k = DictKeys()
+    dd = DictKeys.__dict__
+    k_values = [dd[k] for k in dd.keys() if not k.startswith('__')]
+
+    with open(csv_path, mode='r') as csv_file:
+        csv_reader = csv.DictReader(csv_file)
+
+        for row in csv_reader:
+            codes = nomenclature.AA_RESIDUES_LIST
+            row_d = {}
             tmp = {}
-            for key, value in item.items():
-                if key != k.SCORES:
-                    tmp[key] = value
+            if any(['None' in v for v in row.values()]):
+                row_d[k.COMPLETE_DATA] = False
+            else:
+                row_d[k.COMPLETE_DATA] = True
+            for key, value in row.items():
+                code = key[:3]
+                if code in codes:
+                    corr, _, matrix = value.partition('_m_')
+                    if corr == 'None':
+                        corr = None
+                    if matrix == 'None':
+                        matrix = None
+                    if code not in tmp.keys():
+                        if 'None' not in value:
+                            tmp[code] = [float(corr), key, matrix]
+                        else:
+                            tmp[code] = [None, None, None]
+                    elif tmp[code][0] is not None and 'None' not in value:
+                        if tmp[code][0] < float(corr):
+                            tmp[code][0] = float(corr)
+                            tmp[code][1] = key
+                            tmp[code][2] = matrix
+
+                elif key in k_values:
+                    try:
+                        row_d[key] = int(value)
+                    except ValueError:
+                        row_d[key] = value
                 else:
-                    for el in value:
-                        tmp[el[0]] = el[1]
-            out_data.append(tmp)
+                    raise Exception(f'Key {key} is unknown to the data structure cannot continue')
 
-        with open(csv_path, mode='w') as csv_file:
-            fieldnames = [key for key in out_data[0].keys()]
-            writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-            writer.writeheader()
-            for item in out_data:
-                writer.writerow(item)
+            max_correlation = -1
+            row_d[k.M_TOP_TYPE] = None
+            row_d[k.M_TOP_NAME] = None
+            row_d[k.TOP_CC] = None
+            row_d[k.SAME_TYPE_NAME] = None
+            row_d[k.SAME_TYPE_CC] = None
+            for key, value in tmp.items():
+                if key == row_d[k.RES_TYPE]:
+                    row_d[k.SAME_TYPE_NAME] = value[1]
+                    row_d[k.SAME_TYPE_CC] = value[0]
+                    row_d[k.SAME_TYPE_MATRIX] = value[2]
+                if value[0] is not None:
+                    if value[0] > max_correlation:
+                        max_correlation = value[0]
+                        row_d[k.M_TOP_TYPE] = key
+                        row_d[k.M_TOP_NAME] = value[1]
+                        row_d[k.TOP_CC] = value[0]
+                        row_d[k.M_TOP_MATRIX] = value[2]
 
-    @staticmethod
-    def csv_to_top_csv(csv_path, out_csv_path):
-        data_frame = []
-        k = DictKeys()
-        dd = DictKeys.__dict__
-        k_values = [dd[k] for k in dd.keys() if not k.startswith('__')]
+            for key, value in tmp.items():
+                row_d[key + k.TYPE_TOP_CC] = value[0]
+                row_d[key + k.TYPE_TOP_NAME] = value[1]
+            data_frame.append(row_d)
 
-        with open(csv_path, mode='r') as csv_file:
-            csv_reader = csv.DictReader(csv_file)
+    data_frame.sort(key=operator.itemgetter(k.CHAIN, k.RES_NR))
+    dict_list_to_csv(data_frame, out_csv_path)
 
-            for row in csv_reader:
-                codes = nomenclature.AA_RESIDUES_LIST
-                row_d = {}
-                tmp = {}
-                if any(['None' in v for v in row.values()]):
-                    row_d[k.COMPLETE_DATA] = False
+
+def csv_to_top_scores_only_csv(csv_path, out_csv_path):
+    """
+    Keeps only minimum data for the web version of the Strudel Score.
+    :param csv_path: input scv file path
+    :param out_csv_path: output scv file path
+    """
+    data_frame = []
+    k = DictKeys()
+    dd = DictKeys.__dict__
+    k_values = [dd[k] for k in dd.keys() if not k.startswith('__')]
+
+    with open(csv_path, mode='r') as csv_file:
+        csv_reader = csv.DictReader(csv_file)
+
+        for row in csv_reader:
+            codes = nomenclature.AA_RESIDUES_LIST
+            row_d = {}
+            tmp = {}
+            if any(['None' not in v for v in row.values()]):
+                row_d[k.COMPLETE_DATA] = False
+            else:
+                row_d[k.COMPLETE_DATA] = True
+            for key, value in row.items():
+                code = key[:3]
+                if code in codes:
+                    corr, _, matrix = value.partition('_m_')
+                    if code not in tmp.keys():
+                        if 'None' not in value:
+                            tmp[code] = [float(corr), key]
+                        else:
+                            tmp[code] = [None, None]
+
+                    elif tmp[code][0] is not None and 'None' not in value:
+                        if tmp[code][0] < float(corr):
+                            tmp[code][0] = float(corr)
+                            tmp[code][1] = key
+
+                elif key in k_values:
+                    try:
+                        row_d[key] = int(value)
+                    except ValueError:
+                        row_d[key] = value
                 else:
-                    row_d[k.COMPLETE_DATA] = True
-                for key, value in row.items():
-                    code = key[:3]
-                    if code in codes:
-                        corr, _, matrix = value.partition('_m_')
-                        if corr == 'None':
-                            corr = None
-                        if matrix == 'None':
-                            matrix = None
-                        if code not in tmp.keys():
-                            if 'None' not in value:
-                                tmp[code] = [float(corr), key, matrix]
-                            else:
-                                tmp[code] = [None, None, None]
-                        elif tmp[code][0] is not None and 'None' not in value:
-                            if tmp[code][0] < float(corr):
-                                tmp[code][0] = float(corr)
-                                tmp[code][1] = key
-                                tmp[code][2] = matrix
+                    raise Exception(f'Key {key} is unknown to the data structure cannot continue')
 
-                    elif key in k_values:
-                        try:
-                            row_d[key] = int(value)
-                        except ValueError:
-                            row_d[key] = value
-                    else:
-                        raise Exception(f'Key {key} is unknown to the data structure cannot continue')
+            max_correlation = -1
+            row_d[k.M_TOP_TYPE] = None
+            row_d[k.TOP_CC] = None
+            for key, value in tmp.items():
+                if key == row_d[k.RES_TYPE]:
+                    row_d[k.SAME_TYPE_CC] = value[0]
+                if value[0] is not None:
+                    if value[0] > max_correlation:
+                        max_correlation = round(value[0], 5)
+                        row_d[k.M_TOP_TYPE] = key
+                        row_d[k.TOP_CC] = round(value[0], 5)
 
-                max_correlation = -1
-                row_d[k.M_TOP_TYPE] = None
-                row_d[k.M_TOP_NAME] = None
-                row_d[k.TOP_CC] = None
-                row_d[k.SAME_TYPE_NAME] = None
-                row_d[k.SAME_TYPE_CC] = None
-                for key, value in tmp.items():
-                    if key == row_d[k.RES_TYPE]:
-                        row_d[k.SAME_TYPE_NAME] = value[1]
-                        row_d[k.SAME_TYPE_CC] = value[0]
-                        row_d[k.SAME_TYPE_MATRIX] = value[2]
-                    if value[0] is not None:
-                        if value[0] > max_correlation:
-                            max_correlation = value[0]
-                            row_d[k.M_TOP_TYPE] = key
-                            row_d[k.M_TOP_NAME] = value[1]
-                            row_d[k.TOP_CC] = value[0]
-                            row_d[k.M_TOP_MATRIX] = value[2]
-
-                for key, value in tmp.items():
-                    row_d[key + k.TYPE_TOP_CC] = value[0]
-                    row_d[key + k.TYPE_TOP_NAME] = value[1]
-                data_frame.append(row_d)
-
-        data_frame.sort(key=operator.itemgetter(k.CHAIN, k.RES_NR))
-        with open(out_csv_path, mode='w') as csv_file:
-            fieldnames = [key for key in data_frame[0].keys()]
-            writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-            writer.writeheader()
-            for item in data_frame:
-                print(item)
-                writer.writerow(item)
-
-    @staticmethod
-    def csv_to_top_scores_only_csv(csv_path, out_csv_path):
-        data_frame = []
-        k = DictKeys()
-        dd = DictKeys.__dict__
-        k_values = [dd[k] for k in dd.keys() if not k.startswith('__')]
-
-        with open(csv_path, mode='r') as csv_file:
-            csv_reader = csv.DictReader(csv_file)
-
-            for row in csv_reader:
-                codes = nomenclature.AA_RESIDUES_LIST
-                row_d = {}
-                tmp = {}
-                if any(['None' not in v for v in row.values()]):
-                    row_d[k.COMPLETE_DATA] = False
-                else:
-                    row_d[k.COMPLETE_DATA] = True
-                for key, value in row.items():
-                    code = key[:3]
-                    if code in codes:
-                        corr, _, matrix = value.partition('_m_')
-                        if code not in tmp.keys():
-                            if 'None' not in value:
-                                tmp[code] = [float(corr), key]
-                            else:
-                                tmp[code] = [None, None]
-
-                        elif tmp[code][0] is not None and 'None' not in value:
-                            if tmp[code][0] < float(corr):
-                                tmp[code][0] = float(corr)
-                                tmp[code][1] = key
-
-                    elif key in k_values:
-                        try:
-                            row_d[key] = int(value)
-                        except ValueError:
-                            row_d[key] = value
-                    else:
-                        raise Exception(f'Key {key} is unknown to the data structure cannot continue')
-
-                max_correlation = -1
-                row_d[k.M_TOP_TYPE] = None
-                row_d[k.TOP_CC] = None
-                for key, value in tmp.items():
-                    if key == row_d[k.RES_TYPE]:
-                        row_d[k.SAME_TYPE_CC] = value[0]
-                    if value[0] is not None:
-                        if value[0] > max_correlation:
-                            max_correlation = round(value[0], 5)
-                            row_d[k.M_TOP_TYPE] = key
-                            row_d[k.TOP_CC] = round(value[0], 5)
-
-                for key, value in tmp.items():
-                    row_d[key] = value[0]
-                data_frame.append(row_d)
-        data_frame.sort(key=operator.itemgetter(k.CHAIN, k.RES_NR))
-        with open(out_csv_path, mode='w') as csv_file:
-            fieldnames = [key for key in data_frame[0].keys()]
-            writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-            writer.writeheader()
-            for item in data_frame:
-                writer.writerow(item)
+            for key, value in tmp.items():
+                row_d[key] = value[0]
+            data_frame.append(row_d)
+    data_frame.sort(key=operator.itemgetter(k.CHAIN, k.RES_NR))
+    dict_list_to_csv(data_frame, out_csv_path)
 
 
 class ComputeScores:
+    """
+    Class for correlations calculation between each amino acid residue map and each map motif
+    """
     def __init__(self):
         self.residues = nomenclature.AA_RESIDUES_LIST
         self.chimera_path = config.CHIMERA_PATH
@@ -237,14 +273,19 @@ class ComputeScores:
         self.input = None
         self.out_dir = None
 
-    def set_paths(self, work_dir, lib=None, in_map=None, in_model=None):
+    def set_paths(self, work_dir, lib, in_map, in_model):
+        """
+        Creates the directory tree for the output and sets the input files paths
+        :param work_dir: output directory
+        :param lib: map motif library path
+        :param in_map: input map path
+        :param in_model: input model path
+        """
         self.work_dir = os.path.abspath(work_dir)
         if os.path.exists(lib):
             self.lib = os.path.abspath(lib).rstrip('/')
             self.out_dir = os.path.join(self.work_dir, 'vs_' + os.path.basename(self.lib))
-            print(self.out_dir)
             self.lib = os.path.join(self.lib, 'motifs')
-            print(self.lib)
             self.check_motif_lib(self.lib)
         else:
             log.info('Motif library %s not found', lib)
@@ -253,7 +294,6 @@ class ComputeScores:
 
         self.segments = os.path.join(self.work_dir, 'segments')
         self.input = os.path.join(self.work_dir, 'input')
-        # self.out_dir = os.path.join(self.work_dir, 'vs_' + os.path.basename(self.lib))
 
         for path in [self.segments, self.input, self.out_dir]:
             try:
@@ -266,6 +306,10 @@ class ComputeScores:
 
     @staticmethod
     def check_motif_lib(motif_lib_dir):
+        """
+        Checks the integrity of the motif library
+        :param motif_lib_dir: motif library directory
+        """
         log.info(f'Checking @{os.path.basename(motif_lib_dir)} motif library')
 
         files = os.listdir(motif_lib_dir)
@@ -286,6 +330,13 @@ class ComputeScores:
                 log.warning('Missing model file for %s motif', name)
 
     def chop_structure(self, n_cores=4, voxel=0.25, replace=True):
+        """
+        Chops the input map and model into amino-acid fragments
+        :param n_cores: number of computing cores
+        :param voxel: library voxel size
+        :param replace: replace or not fragments chopped in during previous runs
+        :return: segments list file path (json format)
+        """
         try:
             in_model = bioUtils.load_structure(self.in_model)[0]
             log.info('Failed to load structure using "auth" cif records.\nAttempting to use "label" records')
@@ -339,6 +390,16 @@ class ComputeScores:
         return segments_list_path
 
     def _slave(self, residues, map_obj_list, shifts_list, whole_model, work_dir, voxel, replace):
+        """
+        Chopping worker
+        :param residues: list of biopython residues objects
+        :param map_obj_list: strudel map objects list
+        :param shifts_list: list of translation matrices
+        :param whole_model: input model as biopython object
+        :param work_dir: work directory
+        :param voxel: voxel size
+        :param replace: replace or not fragments chopped in during previous runs
+        """
 
         for i in range(len(residues)):
             residue = residues[i]
@@ -377,6 +438,15 @@ class ComputeScores:
             self.chopped_pairs.append((fin_map_path, residue_path))
 
     def compute_correlations(self, pairs_json, n_cores=4, recompute=False, verbose=False):
+        """
+        Calculates input map fragments versus library map motifs correlations
+        Runs Chimera as subprocess
+        :param pairs_json: json file with chopped maps amd models paths
+        :param n_cores: number of cores
+        :param recompute: recompute or not known correlations from previous runs
+        :param verbose: to run ChimeraX in verbose mode or not
+        :return: output json file path
+        """
         log.info('Running correlations calculations with ChimeraX')
         # Update keys in the chimeraX script
         updated_script = self.update_chimerax_script(self.score_chimera_script)
@@ -402,6 +472,11 @@ class ComputeScores:
 
     @staticmethod
     def update_chimerax_script(script_path):
+        """
+        Updates the dictionary keys in the Chimerax script
+        :param script_path: Chimerax script path
+        :return:
+        """
         dd = DictKeys.__dict__
         with open(script_path, 'r') as f:
             lines = f.readlines()
@@ -455,8 +530,8 @@ def main():
     json_file_path = compute.compute_correlations(chopped_pairs, args.np, args.recompute_scores, verbose=args.v_c)
 
     prefix = os.path.splitext(json_file_path)[0]
-    Utils.csv_to_top_csv(prefix+'.csv', prefix+'_top.csv')
-    Utils.csv_to_top_scores_only_csv(prefix + '.csv', prefix + '_top_for_web.csv')
+    csv_to_top_csv(prefix+'.csv', prefix+'_top.csv')
+    csv_to_top_scores_only_csv(prefix + '.csv', prefix + '_top_for_web.csv')
 
     logging.info('\nElapsed: {}\n{:_^100}'.format(func.report_elapsed(start), ''))
 
