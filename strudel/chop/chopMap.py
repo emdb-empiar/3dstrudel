@@ -301,10 +301,10 @@ class ChopMap:
         out_map_obj.copy_header(in_map)
         out_map_obj.data = final
 
-        mask_ob = MapParser('')
-        mask_ob.copy_header(out_map_obj)
-        mask_ob.data = mask
-        mask_ob.write_map('/Users/andrei/covid/30178/segm/mask_rad851_old.mrc')
+        # mask_ob = MapParser('')
+        # mask_ob.copy_header(out_map_obj)
+        # mask_ob.data = mask
+        # mask_ob.write_map('/Users/andrei/covid/30178/segm/mask_rad851_old.mrc')
 
         if out_map is not None:
             out_map_obj.write_map(out_map)

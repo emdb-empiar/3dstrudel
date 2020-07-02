@@ -1,6 +1,6 @@
 from strudel.classification.penultimateClassifier import PenultimateClassifier
 import copy
-import strudel.lib.strudel.nomenclature as nomenclature
+import strudel.nomenclature as nomenclature
 
 lib = {}
 

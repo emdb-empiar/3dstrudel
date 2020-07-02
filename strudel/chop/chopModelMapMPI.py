@@ -31,7 +31,6 @@ import numpy as np
 from datetime import datetime
 import time
 import json
-import subprocess
 from multiprocessing import Process, Array
 from mpi4py import MPI
 from random import shuffle
@@ -39,8 +38,7 @@ from random import shuffle
 from strudel.chop.chopMap import ChopMap, MapParser
 import strudel.utils.functions as func
 from strudel.utils import bioUtils
-from strudel.utils import modelMapUtils
-import strudel.lib.strudel.nomenclature as nomenclature
+import strudel.nomenclature as nomenclature
 
 
 # noinspection PyTypeChecker
@@ -232,7 +230,7 @@ class ChopModelMap:
                 for cl in duplicates:
                     self.chop_log.info(' '.join(cl))
 
-            unique_best_chains = bioUtils.select_best_chains(structure, self.map_object, classes, threshold=self.inclusion_threshold)
+            unique_best_chains = bioUtils.select_best_chains(structure, self.map_object, classes)
             if self.rank == 0:
                 self.chop_log.info('Selected as best fitting in the map unique chains:')
                 self.chop_log.info(' '.join(unique_best_chains))

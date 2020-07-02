@@ -39,7 +39,7 @@ from Bio.PDB import calc_dihedral
 from Bio.PDB.Superimposer import Superimposer
 
 import strudel.utils.functions as func
-import strudel.lib.strudel.nomenclature as nomenclature
+import strudel.nomenclature as nomenclature
 from strudel.utils import bioUtils
 import strudel.lib.strudel.penultimate_rotamer_lib as p_lib
 
