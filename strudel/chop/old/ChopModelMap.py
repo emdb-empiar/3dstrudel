@@ -186,7 +186,7 @@ class ChopModelMap:
         :param cube_radius: The distance between the cube edge the residue
         :param final_grid: Final voxel size of the chopped maps
         :param chop_radius: Radius around the molecule for map chopping
-        :param chop_soft_radius: Soft radius around the molecule for map chopping
+        :param chop_soft_radius: Soft hard_radius around the molecule for map chopping
         """
         self.cube_radius = cube_radius
         self.final_grid = final_grid
@@ -717,11 +717,11 @@ def main():
     out_dir = j_input["out_dir"]
     for record in input_data:
         start = time.time()
-        job = '{}_{}_{}_{}'.format(record[0], parameters["chopping_mode"], 'grid', parameters["final_grid"])
+        job = '{}_{}_{}_{}'.format(record[0], parameters["chopping_mode"], 'grid', parameters["final_voxel"])
         work_dir = os.path.join(out_dir, job)
         log_path = os.path.join(work_dir, job + '.log')
         chop.set_env(work_dir, record[0], record[1], record[2], log_path)
-        chop.set_map_chop_parameters(parameters["cube_radius"], parameters["final_grid"], parameters["chop_radius"],
+        chop.set_map_chop_parameters(parameters["cube_radius"], parameters["final_voxel"], parameters["chop_radius"],
                                      parameters["chop_soft_radius"], parameters["inclusion_fraction"])
         chop.chop_model_map(residues, chop_map=parameters["chop_map"], chopping_mode=parameters["chopping_mode"])
         date_time = datetime.now().strftime("%H:%M:%S %Y-%m-%d")

@@ -80,7 +80,7 @@ class ChopModelMap:
         self.soft_map_end = ''
         self.hard_map_end = ''
         self.cube_radius = None
-        self.final_grid = None
+        self.final_voxel = None
         self.chop_radius = None
         self.chop_soft_radius = None
         # self.script_path = os.path.dirname(os.path.abspath(__file__))
@@ -164,7 +164,7 @@ class ChopModelMap:
         if self.rank == 0:
             self.chop_log.info("Spent on set_paths %s", func.report_elapsed(s_env_t))
 
-    def set_map_chop_parameters(self, cube_radius=5.0, final_grid=0.5, chop_radius=3.0, chop_soft_radius=2.0,
+    def set_map_chop_parameters(self, cube_radius=5.0, final_voxel=0.5, chop_radius=3.0, chop_soft_radius=2.0,
                                 check_rscc=True, min_rscc=0.7, check_b_values=True, no_charged_check=True):
         """
         Set custom parameters for map chopping
@@ -172,13 +172,13 @@ class ChopModelMap:
         :param check_rscc:
         :param check_inclusion:
         :param cube_radius: The distance between the cube edge the residue
-        :param final_grid: Final voxel size of the chopped maps
+        :param final_voxel: Final voxel size of the chopped maps
         :param chop_radius: Radius around the molecule for map chopping
-        :param chop_soft_radius: Soft radius around the molecule for map chopping
+        :param chop_soft_radius: Soft hard_radius around the molecule for map chopping
         :param resolution:
         """
         self.cube_radius = cube_radius
-        self.final_grid = final_grid
+        self.final_voxel = final_voxel
         self.chop_radius = chop_radius
         self.chop_soft_radius = chop_soft_radius
         self.check_rscc = check_rscc
@@ -471,16 +471,15 @@ class ChopModelMap:
             cube_map_path = os.path.join(tmp_dir, name_prefix + self.cube_end)
             if save_tmp_files:
                 c_map_obj.write_map(cube_map_path)
-            # Resample map
+            # Resampled map path
             cube_new_grid_path = os.path.join(tmp_dir, name_prefix + self.cube_res_end)
             start = time.time()
 
-            # chop.grid_resample(cube_map_path, cube_new_grid_path, self.final_grid)
+            # chop.grid_resample(cube_map_path, cube_new_grid_path, self.final_voxel)
 
-            c_map_obj.grid_resample_emda(self.final_grid)
+            c_map_obj.grid_resample_emda(self.final_voxel)
             if save_tmp_files:
                 c_map_obj.write_map(cube_new_grid_path)
-
 
             end = time.time()
             resampling_time += (end - start)
@@ -747,7 +746,7 @@ def main():
 
     parser.add_argument("-o", "--chop_dir", dest="chop_dir", required=True, help="Where to output the generated files")
     parser.add_argument("-c", "--chop_par", dest="chop_par", nargs='*', required=False,
-                        help="Chopping parameters. Example: cube_radius=4 final_grid=0.5 chop_radius=2.0 "
+                        help="Chopping parameters. Example: cube_radius=4 final_voxel=0.5 chop_radius=2.0 "
                              "chop_soft_radius=1.0 inclusion_fraction=90 chop_map=True chopping_mode=soft "
                              "check_rscc=True")
     parser.add_argument("-r", "--rscc_file", dest="rscc_file", required=False,
@@ -763,7 +762,7 @@ def main():
     parser.add_argument("-filter_chain", "--filter_chain", dest="filter", action='store_true', default=False,
                         help="Do not chop identical chains")
 
-    default_parameters = {"cube_radius": 4, "final_grid": 0.25, "chop_radius": 2.0, "chop_soft_radius": 1.0,
+    default_parameters = {"cube_radius": 4, "final_voxel": 0.25, "chop_radius": 2.0, "chop_soft_radius": 1.0,
                           "chop_map": True, "chopping_mode": "soft", "check_rscc": True}
     args = parser.parse_args()
     if args.mpi:
@@ -827,7 +826,7 @@ def main():
                  warning_level='debug',
                  filter_identical_chains=args.filter)
     chop.set_map_chop_parameters(cube_radius=parameters["cube_radius"],
-                                 final_grid=parameters["final_grid"],
+                                 final_voxel=parameters["final_voxel"],
                                  chop_radius=parameters["chop_radius"],
                                  chop_soft_radius=parameters["chop_soft_radius"],
                                  check_rscc=parameters["check_rscc"],

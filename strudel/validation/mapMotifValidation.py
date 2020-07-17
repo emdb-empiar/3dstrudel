@@ -429,7 +429,7 @@ class ComputeScores:
                 struct = bioUtils.residues2structure(residue)
                 bioUtils.save_model(struct, residue_path)
                 side_chain = bioUtils.del_main_chain(residue)
-                # fin_map = self.chop.chop_soft_radius(side_chain, res_cube_map_path, radius=2, soft_radius=1,)
+                # fin_map = self.chop.chop_soft_radius(side_chain, res_cube_map_path, hard_radius=2, soft_radius=1,)
                 fin_map = self.chop.chop_soft_radius4(side_chain, cube_map_obj, whole_model, radius=2, soft_radius=1, )
                 if np.isnan(np.sum(fin_map.data)):
                     log.error("NaN values in {}".format(fin_map_path))

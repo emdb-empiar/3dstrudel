@@ -4,8 +4,8 @@ ChopMap.py
 A collection of methods which allow to chop a map around an atomic residue.
 The map can be chopped in three different ways:
 - using a cub around the atomic residue with hard edges
-- using certain radius around atomic residue with hard edges
-- using certain radius around atomic residue with soft edges
+- using certain hard_radius around atomic residue with hard edges
+- using certain hard_radius around atomic residue with soft edges
 
 Copyright [2013] EMBL - European Bioinformatics Institute
 Licensed under the Apache License, Version 2.0 (the
@@ -239,7 +239,7 @@ class ChopMap:
     @staticmethod
     def chop_soft_radius(model, in_map, out_map, radius=3, soft_radius=2):
         """
-        Chop map using a soft mask with a given radius around the atomic residue.
+        Chop map using a soft mask with a given hard_radius around the atomic residue.
         A cosine function is used to create the soft mask.
         :param model: biopython atomic residue object
         :param in_map: in_dir to the input map
@@ -291,7 +291,7 @@ class ChopMap:
     @staticmethod
     def chop_hard_radius(model, in_map, out_map, radius=3):
         """
-        Chop map using a hard mask with a given radius around the atomic residue.
+        Chop map using a hard mask with a given hard_radius around the atomic residue.
         :param model: biopython atomic residue object
         :param in_map: in_dir to the input map
         :param out_map: out_map: in_dir for the chopped map

@@ -1,3 +1,23 @@
+"""
+score_chimerax.py
+
+This script calculates correlations
+
+Copyright [2013] EMBL - European Bioinformatics Institute
+Licensed under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in
+compliance with the License. You may obtain a copy of
+the License at
+http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on
+an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied. See the License for the
+specific language governing permissions and limitations
+under the License.
+"""
+
+
 __author__ = 'Andrei Istrate'
 __email__ = 'andrei@ebi.ac.uk'
 __date__ = '2019-04-10'
@@ -18,6 +38,8 @@ import psutil
 # from chimera import openModels as om, selection
 # from FitMap.fitcmd import fitmap
 from chimerax.core.commands import Command
+from chimerax.map.volume import Volume
+from chimerax.atomic.structure import AtomicStructure
 import logging
 
 rc = Command(session)
@@ -25,6 +47,9 @@ SD_LEVEL = 3
 
 
 class DictKeys:
+    """
+    Class for storing the fields names in the output csv file
+    """
     RES_TYPE = 'residue_type'
     RES_NR = 'residue_nr'
     CHAIN = 'chain'
@@ -73,13 +98,31 @@ def run_x(command):
         return None
 
 
+def open_model(path, log):
+    try:
+        model_obj = session.open_command.open_data(path)[0][0]
+        if type(model_obj) == AtomicStructure or type(model_obj) == Volume:
+            session.models.add([model_obj])
+            return model_obj
+    except AttributeError:
+        model_obj = run_x(f'open {path}')
+        if type(model_obj) == AtomicStructure or type(model_obj) == Volume:
+            return model_obj
+        else:
+            log.error(f'Could not get model object reference after opening:\n {path}')
+
+
 def read_motif_lib(motif_lib_dir):
+    """
+    Reads motif library
+    :param motif_lib_dir: library path
+    :return: list of map model pair paths
+    """
     lib_pairs = []
     files = os.listdir(motif_lib_dir)
     pdb_names = [i for i in files if i.endswith('.cif') and not i.startswith('.')]
     for name in pdb_names:
         prefix = name.split('.cif')[0]
-        # res = name.split('-')[0].upper()
         map_path = os.path.join(motif_lib_dir, prefix + '.map')
         mrc_path = os.path.join(motif_lib_dir, prefix + '.mrc')
         if os.path.exists(map_path):
@@ -90,10 +133,20 @@ def read_motif_lib(motif_lib_dir):
 
 
 def score_residue(res_map, res_model, loaded_lib, log):
+    """
+    Scores a residue map against the motif library
+    :param res_map: residue map path
+    :param res_model: residue model path
+    :param loaded_lib: motif library as chimerax objects
+    :param log: logger
+    :return: residue scores
+    """
     log.info(f'Scoring {os.path.basename(res_map)}, {os.path.basename(res_model)} ')
     res_score = []
-    mod = run_x('open ' + res_model)
-    vol = run_x('open ' + res_map)
+    # mod = run_x('open ' + res_model)
+    # vol = run_x('open ' + res_map)
+    mod = open_model('open ' + res_model, log)
+    vol = open_model('open ' + res_map, log)
     for motif, lib_mod, lib_vol in loaded_lib:
         mod_sel = '#{}@c,ca,n'.format(mod.id_string)
         lib_mod_sel = '#{}@c,ca,n'.format(lib_mod.id_string)
@@ -147,6 +200,10 @@ def score_residue(res_map, res_model, loaded_lib, log):
 
 
 def capture_memory_usage():
+    """
+    Finds the memory usage of the current process
+    :return: memory usage in MB
+    """
     p = psutil.Process()
     mem = psutil.Process(p.pid).memory_info()
     return p.pid, mem.rss / 1000000
@@ -161,8 +218,10 @@ def slave(pairs_list, lib, score_list, lock, json_out_path, csv_out_path=None, c
         log.info('Loading motif library')
         l_lib = []
         for mot in lib:
-            mod = run_x('open ' + mot[1])
-            vol = run_x('open ' + mot[2])
+            # mod = run_x('open ' + mot[1])
+            # vol = run_x('open ' + mot[2])
+            mod = open_model('open ' + mot[1], log)
+            vol = open_model('open ' + mot[2], log)
             l_lib.append([mot[0], mod, vol])
         return l_lib
 
@@ -218,6 +277,16 @@ def slave(pairs_list, lib, score_list, lock, json_out_path, csv_out_path=None, c
 
 
 def score_structure(known_correlations, unknown_pairs, lib, json_out_path, csv_out_path=None, np=4):
+    """
+    Scores
+    :param known_correlations:
+    :param unknown_pairs:
+    :param lib:
+    :param json_out_path: out json file path
+    :param csv_out_path: out csv file path
+    :param np: number of cores
+    :return:
+    """
     log_tmp = 'process_logs'
 
     if not os.path.exists(log_tmp):

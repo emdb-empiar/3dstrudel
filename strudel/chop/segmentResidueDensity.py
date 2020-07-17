@@ -63,21 +63,24 @@ class ExtractDensity:
                           (center[0] - radius + n_st[2]) * out_map.voxel_size[2] + map_obj.origin[2])
         return out_map
 
-    def map_resample(self, map_obj, file_prefix=''):
-        """
-        Resample the grid in the a map object so that the
-        voxel size become equal to 'self.work_voxel_size'
-        :param map_obj: map object
-        :param file_prefix: prefix for the tmp file
-        :return: map object
-        """
-        tmp = os.path.join(self.tmp_dir, file_prefix + 'tmp.mrc')
-        res_tmp = os.path.join(self.tmp_dir, file_prefix + 'res_tmp.mrc')
-        map_obj.write_map(tmp)
-        chop = ChopMap()
-        chop.grid_resample(tmp, res_tmp, self.work_voxel_size, map_obj.voxel_size[0])
-        out_map_obj = MapParser(res_tmp)
-        return out_map_obj
+    # def map_resample(self, map_obj, file_prefix=''):
+    #     """
+    #     Resample the grid in the a map object so that the
+    #     voxel size become equal to 'self.work_voxel_size'
+    #     :param map_obj: map object
+    #     :param file_prefix: prefix for the tmp file
+    #     :return: map object
+    #     """
+    #     tmp = os.path.join(self.tmp_dir, file_prefix + 'tmp.mrc')
+    #     res_tmp = os.path.join(self.tmp_dir, file_prefix + 'res_tmp.mrc')
+    #
+    #
+    #     map_obj.write_map(tmp)
+    #     chop = ChopMap()
+    #     chop.grid_resample(tmp, res_tmp, self.work_voxel_size, map_obj.voxel_size[0])
+    #     out_map_obj = MapParser(res_tmp)
+    #
+    #     return out_map_obj
 
     def update_map_parameters(self, map_obj):
         self.max_thld = np.amax(map_obj.data)
@@ -98,7 +101,6 @@ class ExtractDensity:
         return prev_ca, next_ca
 
 
-
     def segment_residue_density(self, model):
 
         c_coord, ca_coord, n_coord, cb_coord = self._get_bb_coordinates(model)
@@ -109,12 +111,14 @@ class ExtractDensity:
         res_nr = model.id[1]
         prev_ca_coord, next_ca_coord = self.get_flank_ca_coord(model)
 
-        self.cube_map = self.map_resample(ca_map, str(res_nr))
+        # self.cube_map = self.map_resample(ca_map, str(res_nr))
+        self.cube_map = ca_map.grid_resample_emda(self.work_voxel_size)
+
         self.update_map_parameters(self.cube_map)
 
         if self.adapted_map is not None:
             adapted_ca_map = self.cut_cube_around_voxel(self.adapted_map, ca_index, self.box_size)
-            adapted_cube_map = self.map_resample(adapted_ca_map, str(res_nr))
+            adapted_cube_map = adapted_ca_map.grid_resample_emda(self.work_voxel_size)
             self.interpolator = modelMapUtils.interpolator(adapted_cube_map)
         else:
             self.interpolator = modelMapUtils.interpolator(self.cube_map)
