@@ -22,6 +22,7 @@ __email__ = 'andrei@ebi.ac.uk'
 __date__ = '2018-05-29'
 
 import os
+import sys
 import csv
 import json
 import subprocess
@@ -34,6 +35,7 @@ from datetime import datetime
 import time
 import argparse
 from multiprocessing import Process, Manager
+from distutils.spawn import find_executable
 
 from strudel.chop.chopMap import ChopMap
 from strudel.utils import functions as func
@@ -134,7 +136,7 @@ def csv_to_top_csv(csv_path, out_csv_path):
                 row_d[k.COMPLETE_DATA] = True
             for key, value in row.items():
                 code = key[:3]
-                if code in codes:
+                if code.upper() in codes:
                     corr, _, matrix = value.partition('_m_')
                     if corr == 'None':
                         corr = None
@@ -165,6 +167,7 @@ def csv_to_top_csv(csv_path, out_csv_path):
             row_d[k.TOP_CC] = None
             row_d[k.SAME_TYPE_NAME] = None
             row_d[k.SAME_TYPE_CC] = None
+            row_d[k.SAME_TYPE_MATRIX] = None
             for key, value in tmp.items():
                 if key == row_d[k.RES_TYPE]:
                     row_d[k.SAME_TYPE_NAME] = value[1]
@@ -181,6 +184,7 @@ def csv_to_top_csv(csv_path, out_csv_path):
             for key, value in tmp.items():
                 row_d[key + k.TYPE_TOP_CC] = value[0]
                 row_d[key + k.TYPE_TOP_NAME] = value[1]
+                row_d[key + k.TYPE_TOP_MATRIX] = value[2]
             data_frame.append(row_d)
 
     data_frame.sort(key=operator.itemgetter(k.CHAIN, k.RES_NR))
@@ -211,7 +215,7 @@ def csv_to_top_scores_only_csv(csv_path, out_csv_path):
                 row_d[k.COMPLETE_DATA] = True
             for key, value in row.items():
                 code = key[:3]
-                if code in codes:
+                if code.upper() in codes:
                     corr, _, matrix = value.partition('_m_')
                     if code not in tmp.keys():
                         if 'None' not in value:
@@ -257,7 +261,7 @@ class ComputeScores:
     """
     def __init__(self):
         self.residues = nomenclature.AA_RESIDUES_LIST
-        self.chimera_path = config.CHIMERA_PATH
+        self.chimera_path = self.find_chimerax()
         basedir = os.path.dirname(os.path.abspath(__file__))
         self.score_chimera_script = os.path.join(basedir, 'score_chimerax.py')
         self.segmented_pairs = 'segments_list.json'
@@ -272,6 +276,14 @@ class ComputeScores:
         self.in_model = None
         self.input = None
         self.out_dir = None
+
+    def find_chimerax(self):
+        path = config.CHIMERA_PATH
+        out = find_executable(path)
+        if out is None:
+            raise Exception(f'Could not find ChimeraX\n please edit {os.path.abspath(config.__file__)}')
+        else:
+            return path
 
     def set_paths(self, work_dir, lib, in_map, in_model):
         """
@@ -322,6 +334,8 @@ class ComputeScores:
         map_names.sort()
         if len(pdb_names) != len(map_names):
             log.warning('There are missing files in the map motif library: %s', motif_lib_dir)
+        else:
+            log.info(f'OK')
         for name in pdb_names:
             if name not in map_names:
                 log.warning('Missing map file for %s motif', name)
@@ -339,7 +353,7 @@ class ComputeScores:
         """
         try:
             in_model = bioUtils.load_structure(self.in_model)[0]
-            log.info('Failed to load structure using "auth" cif records.\nAttempting to use "label" records')
+            log.info('Failed to load structure using "auth" cif records. Attempting to use "label" records')
         except:
             in_model = bioUtils.load_structure_label_id(self.in_model)[0]
 
@@ -422,15 +436,14 @@ class ComputeScores:
 
                 cube_map_obj.grid_resample_emda(voxel)
 
-                # self.chop.grid_resample(cube_map_path, res_cube_map_path, voxel)
-                cube_map_obj.write_map(res_cube_map_path)
+                # cube_map_obj.write_map(res_cube_map_path)
 
                 bioUtils.shift_coord(matrix, residue)
                 struct = bioUtils.residues2structure(residue)
                 bioUtils.save_model(struct, residue_path)
                 side_chain = bioUtils.del_main_chain(residue)
                 # fin_map = self.chop.chop_soft_radius(side_chain, res_cube_map_path, hard_radius=2, soft_radius=1,)
-                fin_map = self.chop.chop_soft_radius4(side_chain, cube_map_obj, whole_model, radius=2, soft_radius=1, )
+                fin_map = self.chop.chop_soft_radius_watershed(side_chain, cube_map_obj, whole_model, radius=2, soft_radius=1, )
                 if np.isnan(np.sum(fin_map.data)):
                     log.error("NaN values in {}".format(fin_map_path))
                 fin_map.write_map(fin_map_path)
@@ -465,7 +478,7 @@ class ComputeScores:
         json_out = os.path.abspath(json_out)
 
         command = f'{self.chimera_path} --nogui {v_flag} {updated_script}' \
-                  f' -p {pairs_json} -l {self.lib} -np {n_cores} -o {json_out} {recompute} > chimera.out'
+                  f' -p {pairs_json} -l {self.lib} -np {n_cores} -o {json_out} {recompute} > chimera.log'
 
         subprocess.call(command, cwd=self.out_dir, shell=True)
         return json_out
@@ -517,9 +530,12 @@ def main():
     else:
         log_file = os.path.join(args.out, 'map_motif_validation.log')
 
+    if not os.path.exists(args.out):
+        os.makedirs(args.out)
+
     logging.basicConfig(filename=log_file, level=logging.INFO, format='%(levelname)s:  %(message)s')
     date_time = datetime.now().strftime("%H:%M:%S %Y-%m-%d")
-    logging.info('{:_^100}'.format('MapMotifValidation') + '\n\nStarted: {}\n'.format(date_time))
+    logging.info('\n{:_^100}'.format('MapMotifValidation') + '\n\nStarted: {}\n'.format(date_time))
 
     args.np = int(args.np)
     start = time.time()
@@ -530,8 +546,9 @@ def main():
     json_file_path = compute.compute_correlations(chopped_pairs, args.np, args.recompute_scores, verbose=args.v_c)
 
     prefix = os.path.splitext(json_file_path)[0]
-    csv_to_top_csv(prefix+'.csv', prefix+'_top.csv')
-    csv_to_top_scores_only_csv(prefix + '.csv', prefix + '_top_for_web.csv')
+    if os.path.exists(prefix + '.csv'):
+        csv_to_top_csv(prefix+'.csv', prefix+'_top.csv')
+        # csv_to_top_scores_only_csv(prefix + '.csv', prefix + '_top_for_web.csv')
 
     logging.info('\nElapsed: {}\n{:_^100}'.format(func.report_elapsed(start), ''))
 

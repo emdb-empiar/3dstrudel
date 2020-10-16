@@ -29,7 +29,7 @@ import sys
 from multiprocessing import Process, Manager, Lock
 from datetime import datetime
 import multiprocessing
-from shutil import copy
+from shutil import copy, rmtree
 import json
 import argparse
 import operator
@@ -145,8 +145,8 @@ def score_residue(res_map, res_model, loaded_lib, log):
     res_score = []
     # mod = run_x('open ' + res_model)
     # vol = run_x('open ' + res_map)
-    mod = open_model('open ' + res_model, log)
-    vol = open_model('open ' + res_map, log)
+    mod = open_model(res_model, log)
+    vol = open_model(res_map, log)
     for motif, lib_mod, lib_vol in loaded_lib:
         mod_sel = '#{}@c,ca,n'.format(mod.id_string)
         lib_mod_sel = '#{}@c,ca,n'.format(lib_mod.id_string)
@@ -213,15 +213,16 @@ def slave(pairs_list, lib, score_list, lock, json_out_path, csv_out_path=None, c
     p = psutil.Process()
     log = logging.getLogger(str(p.pid))
 
-    logging.basicConfig(filename='process_logs/' + str(p.pid) + '.log', level=logging.INFO, format='%(levelname)s:  %(message)s')
+    logging.basicConfig(filename='process_logs/' + str(p.pid) + '.log', level=logging.INFO,
+                        format='%(levelname)s:  %(message)s')
     def load_lib():
         log.info('Loading motif library')
         l_lib = []
         for mot in lib:
             # mod = run_x('open ' + mot[1])
             # vol = run_x('open ' + mot[2])
-            mod = open_model('open ' + mot[1], log)
-            vol = open_model('open ' + mot[2], log)
+            mod = open_model(mot[1], log)
+            vol = open_model(mot[2], log)
             l_lib.append([mot[0], mod, vol])
         return l_lib
 
@@ -323,7 +324,7 @@ def score_structure(known_correlations, unknown_pairs, lib, json_out_path, csv_o
     # Combine logs
     combine_files(log_tmp, 'score_' + datetime.now().strftime("%Y-%m-%d") + '.log')
     if os.path.exists(log_tmp):
-        os.rmdir(log_tmp)
+        rmtree(log_tmp)
 
 def combine_files(dir_path, out_file):
     files = os.listdir(dir_path)
@@ -392,13 +393,13 @@ def exclude_known_pairs(pair_list, inp_corr_list):
 def main():
     import time
     start = time.time()
-    print(sys.argv)
+    # print(sys.argv)
     st_arg = 1
     for item in sys.argv:
         if str(item).startswith('--'):
             st_arg += 1
     sys.argv = sys.argv[st_arg:]
-    print(sys.argv)
+    # print(sys.argv)
     parser = argparse.ArgumentParser(description='Score map')
     parser.add_argument("-p", "--pair_list", dest="pair_list", required=True,
                         help="List of residue map, residue pdb paths as json file")

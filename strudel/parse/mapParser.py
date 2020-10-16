@@ -18,6 +18,10 @@ specific language governing permissions and limitations
 under the License.
 """
 
+__author__ = 'Andrei Istrate'
+__email__ = 'andrei@ebi.ac.uk'
+__date__ = '2018-05-29'
+
 import os
 import mrcfile
 import math
@@ -156,7 +160,7 @@ class MapParser:
         """
         Converts atomic residue coordinates into map indices
         :param coord: coordinate in angstrom
-        :return: float indices
+        :return: int indices
         """
         x, y, z = self._coord_to_index_orthogonal(coord)
         return int(round(x)), int(round(y)), int(round(z))

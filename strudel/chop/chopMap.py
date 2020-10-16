@@ -25,7 +25,6 @@ __author__ = 'Andrei Istrate'
 __email__ = 'andrei@ebi.ac.uk'
 __date__ = '2018-05-29'
 
-
 import math
 from random import randint
 import mrcfile
@@ -39,6 +38,7 @@ class ChopMap:
     """
     Class for chopping map around an atomic model
     """
+
     def __init__(self, in_model=None, in_map=None):
         self.model = in_model
         self.map = in_map
@@ -115,9 +115,9 @@ class ChopMap:
             new_dimension = radius * 2
             # Ensure that the new grid size has no prime numbers greater than 19
 
-            #new_dimension = func.find_good_grid([new_dimension, new_dimension, new_dimension])[0]
-            #print(new_dimension)
-            #hard_radius = int(new_dimension / 2)
+            # new_dimension = func.find_good_grid([new_dimension, new_dimension, new_dimension])[0]
+            # print(new_dimension)
+            # hard_radius = int(new_dimension / 2)
             # Create a numpy array to store the chopped voxels
             new_data = np.zeros((new_dimension, new_dimension, new_dimension), dtype='float32')
 
@@ -157,19 +157,19 @@ class ChopMap:
             n_st = in_map.n_start
             if not zero_origin:
                 origin = ((middle_z - radius + n_st[0]) * out_map.voxel_size[0] + in_map.origin[0],
-                                  (middle_y - radius + n_st[1]) * out_map.voxel_size[1] + in_map.origin[1],
-                                  (middle_x - radius + n_st[2]) * out_map.voxel_size[2] + in_map.origin[2])
+                          (middle_y - radius + n_st[1]) * out_map.voxel_size[1] + in_map.origin[1],
+                          (middle_x - radius + n_st[2]) * out_map.voxel_size[2] + in_map.origin[2])
                 out_map.set_origin(origin)
             chopped_map_obj_list.append(out_map)
             shifts_list.append(shifts)
-            #match = self.check_cut_vals(residue, in_map, out_map, shifts)
-            #if match:
-                # chopped_map_obj_list.append(out_map)
-                # shifts_list.append(shifts)
-            #else:
-                # chopped_map_obj_list.append(None)
-                # shifts_list.append(None)
-                # print("NO  MATCH")
+            # match = self.check_cut_vals(residue, in_map, out_map, shifts)
+            # if match:
+            # chopped_map_obj_list.append(out_map)
+            # shifts_list.append(shifts)
+            # else:
+            # chopped_map_obj_list.append(None)
+            # shifts_list.append(None)
+            # print("NO  MATCH")
 
         if len(shifts_list) > 1 or lst:
             return chopped_map_obj_list, shifts_list
@@ -211,7 +211,7 @@ class ChopMap:
         for i in range(len(in_coords)):
             in_indices = in_map.coord_to_index_int(in_coords[i])
             out_indices = out_map.coord_to_index_int(out_coords[i])
-            neg_indices = sum(n < 0 for n in in_indices+out_indices)
+            neg_indices = sum(n < 0 for n in in_indices + out_indices)
             if neg_indices > 0:
                 in_vals.append(None)
                 out_vals.append(None)
@@ -279,7 +279,7 @@ class ChopMap:
                         d = aver_voxel_size * math.sqrt((x - x_index) ** 2 + (y - y_index) ** 2 + (z - z_index) ** 2)
 
                         # Assign mask values based to the distance to the atoms
-                        if d < delta1:
+                        if d <= delta1:
                             try:
                                 mask[x, y, z] = 1
                             except IndexError:
@@ -312,13 +312,6 @@ class ChopMap:
             return out_map_obj
 
     @staticmethod
-    def iterator_grid(xyz, r_xyz):
-        for x in range(xyz[0] - r_xyz[0], xyz[0] + r_xyz[0]):
-            for y in range(xyz[1] - r_xyz[1], xyz[1] + r_xyz[1]):
-                for z in range(xyz[2] - r_xyz[2], xyz[2] + r_xyz[2]):
-                    yield x, y, z
-
-    @staticmethod
     def find_near(atom, model, distance=6):
         close = []
         for atom1 in model.get_atoms():
@@ -328,10 +321,12 @@ class ChopMap:
                     close.append(atom1)
         return list(set(close))
 
-    def chop_soft_radius4(self, model, in_map, whole_model, shifts=None, out_map=None, radius=2, soft_radius=1):
+    def chop_soft_radius_watershed(self, model, in_map, whole_model, shifts=None, out_map=None,
+                                   radius=2, soft_radius=1, mask_path=None):
         """
         Chop map using a soft mask with a given hard_radius around the atomic residue.
-        A cosine function is used to create the soft mask.
+        A cosine function is used to create the soft mask. Similar to chop_soft_radius but avoids
+        cutting neighboring residues side chains map.
         :param model: biopython atomic residue object
         :param in_map: in_dir to the input map
         :param out_map: out_map: in_dir for the chopped map
@@ -373,16 +368,17 @@ class ChopMap:
                         near_ds = [100]
                         for n_atom in near_atoms:
                             n_xyz = in_map.coord_to_index(n_atom.coord - shifts)
-                            dn = aver_voxel_size * math.sqrt((x - n_xyz[0]) ** 2 + (y - n_xyz[1]) ** 2 + (z - n_xyz[2]) ** 2)
+                            dn = aver_voxel_size * math.sqrt((x - n_xyz[0]) ** 2 + (y - n_xyz[1]) ** 2
+                                                             + (z - n_xyz[2]) ** 2)
                             near_ds.append(dn)
                         dn = min(near_ds)
 
                         # Calculate the distance between the current atom and the current voxel
                         d = aver_voxel_size * math.sqrt((x - xyz[0]) ** 2 + (y - xyz[1]) ** 2 + (z - xyz[2]) ** 2)
-                        if d > dn*1.3:
+                        if d > dn * 1.3:
                             continue
                         elif dn < radius + soft_radius:
-                            delta2 = min((d + dn) * 0.65, radius+soft_radius)
+                            delta2 = min((d + dn) * 0.65, radius + soft_radius)
                             delta1 = delta2 - soft_radius
                         else:
                             delta2 = radius + soft_radius
@@ -405,11 +401,12 @@ class ChopMap:
         out_map_obj = MapParser('')
         out_map_obj.copy_header(in_map)
         out_map_obj.data = final
-        #
-        # mask_ob = MapParser('')
-        # mask_ob.copy_header(in_map)
-        # mask_ob.data = mask
-        # mask_ob.write_map('/Users/andrei/covid/30178/segm/mask_D184_1.4_0.8.mrc')
+
+        if mask_path is not None:
+            mask_ob = MapParser('')
+            mask_ob.copy_header(in_map)
+            mask_ob.data = mask
+            mask_ob.write_map(mask_path)
 
         if out_map is not None:
             out_map_obj.write_map(out_map)
@@ -417,7 +414,7 @@ class ChopMap:
             return out_map_obj
 
     @staticmethod
-    def chop_hard_radius(model, in_map, out_map, radius=3):
+    def chop_hard_radius(model, in_map, out_map, radius=3, mask_path=None):
         """
         Chop map using a hard mask with a given hard_radius around the atomic residue.
         :param model: biopython atomic residue object
@@ -453,7 +450,7 @@ class ChopMap:
                     for z in range(z_index - rz, z_index + rz):
                         # Calculate the distance between the current atom and the current voxel
                         d = aver_voxel_size * math.sqrt((x - x_index) ** 2 + (y - y_index) ** 2
-                                                   + (z - z_index) ** 2)
+                                                        + (z - z_index) ** 2)
                         # Assign mask values based to the distance to the atoms
                         if d < radius:
                             mask[x, y, z] = 1
@@ -461,11 +458,21 @@ class ChopMap:
         # Apply the mask to the map data
         final = (mask * in_map.data)
         # Save the chopped map
-        with mrcfile.new(out_map, overwrite=True) as mr:
-            mr.set_data(final)
-            mr.update_header_from_data()
-            mr.header.cella = in_map.cell
-            mr.header.origin = (0, 0, 0)
+
+        if mask_path is not None:
+            mask_ob = MapParser('')
+            mask_ob.copy_header(in_map)
+            mask_ob.data = mask
+            mask_ob.write_map(mask_path)
+
+        out_map_obj = MapParser('')
+        out_map_obj.copy_header(in_map)
+        out_map_obj.data = final
+
+        if out_map is not None:
+            out_map_obj.write_map(out_map)
+        else:
+            return out_map_obj
 
     @staticmethod
     def grid_resample_emda(x, num):
@@ -496,8 +503,3 @@ class ChopMap:
 
         Y = np.fft.ifftshift(Y)
         return (np.fft.ifftn(Y)).real
-
-
-
-
-
