@@ -58,7 +58,7 @@ def main():
 
     compute = ComputeScores()
     compute.set_paths(work_dir=args.out, lib=args.lib, in_map=args.in_map, in_model=args.in_model)
-    chopped_pairs = compute.chop_structure(n_cores=args.np, voxel=args.voxel, replace=args.recompute_segments)
+    chopped_pairs = compute.segment_structure(n_cores=args.np, voxel=args.voxel, replace=args.recompute_segments)
     json_file_path = compute.compute_correlations(chopped_pairs, args.np, args.recompute_scores, verbose=args.v_c)
 
     prefix = os.path.splitext(json_file_path)[0]

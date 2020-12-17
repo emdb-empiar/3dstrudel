@@ -294,9 +294,9 @@ def make_int_auth_seq_id(model_path, out_path=None):
         io.save(model_path)
 
 
-def classify_chains_(structure, delta=0.1):
+def classify_chains(structure, delta=0.1):
     """
-    Classifies structure chains based on sequence identity and rms
+    Classifies structure chains based on sequence_dir identity and rms
     :param delta: rms distance between classes
     :param structure: Biopython structure object
     :return: list of chain classes
@@ -330,7 +330,7 @@ def classify_chains_(structure, delta=0.1):
                     different = True
                     break
             else:
-                # Superimpose chains with identical sequence
+                # Superimpose chains with identical sequence_dir
                 moving = []
                 fixed = []
                 for res in residues1:
@@ -378,9 +378,9 @@ def classify_chains_(structure, delta=0.1):
     return sorted_clusters, list(max_dist[-len(sorted_clusters)+1:])
 
 
-def classify_chains(structure, delta=0.1):
+def classify_chains_(structure, delta=0.1):
     """
-    Classifies structure chains based on sequence identity and rms
+    Classifies structure chains based on sequence_dir identity and rms
     :param delta: rms distance between classes
     :param structure: Biopython structure object
     :return: list of chain classes
@@ -453,7 +453,7 @@ def classify_chains(structure, delta=0.1):
     #                 different = True
     #                 break
     #         else:
-    #             # Superimpose chains with identical sequence
+    #             # Superimpose chains with identical sequence_dir
     #             moving = []
     #             fixed = []
     #             for res in residues1:

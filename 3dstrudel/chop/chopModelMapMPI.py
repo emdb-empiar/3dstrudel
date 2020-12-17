@@ -1,7 +1,7 @@
 """
 chopModelMap.py
 
-Class for Chopping an atomic residue (and density map) into residues and residue side chains which are saved
+Class for Chopping an atomic residue (and EM map) into residues and residue side chains which are saved
 as separate files.
 The chopped side chains are used to chop the corresponding map.
 This code uses the chopMap module for map chopping.
@@ -738,6 +738,7 @@ class ChopModelMap:
 
 import argparse
 import sys
+
 
 def main():
     parser = argparse.ArgumentParser(description='Chops a map and an atomic model into residues and corresponding maps')

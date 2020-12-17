@@ -17,9 +17,32 @@ AA_RESIDUES_3LET_TO_FULL = {'arg': 'arginine',
                             'ser': 'serine',
                             'cys': 'cysteine'
                             }
+
+AA_3LET_TO_1LET = {'ALA': 'A',
+                   'ARG': 'R',
+                   'ASN': 'N',
+                   'ASP': 'D',
+                   'CYS': 'C',
+                   'GLU': 'E',
+                   'GLN': 'Q',
+                   'GLY': 'G',
+                   'HIS': 'H',
+                   'ILE': 'I',
+                   'LEU': 'L',
+                   'LYS': 'K',
+                   'MET': 'M',
+                   'PHE': 'F',
+                   'PRO': 'P',
+                   'SER': 'S',
+                   'THR': 'T',
+                   'TRP': 'W',
+                   'TYR': 'Y',
+                   'VAL': 'V'}
+
 AA_RESIDUES_LIST = ["ALA", "PHE", "TRP", "ARG", "TYR", "ASP", "ASN", "VAL", "GLU", "GLN",
                     "HIS", "LYS", "THR", "SER", "LEU", "ILE", "GLY", "CYS", "MET", "PRO"]
 CHARGED_RESIDUES = ['ARG', 'ASP', 'GLU', 'LYS']
+
 HEAVY_ATOMS = {'ARG': 11, 'LYS': 9, 'MET': 8, 'GLU': 9, 'GLN': 9, 'ASP': 8, 'ASN': 8,
                'ILE': 8, 'LEU': 8, 'HIS': 10, 'TRP': 14, 'TYR': 12, 'PHE': 11, 'PRO': 7,
                'THR': 7, 'VAL': 7, 'SER': 6, 'CYS': 6, 'ALA': 5, 'GLY': 4}

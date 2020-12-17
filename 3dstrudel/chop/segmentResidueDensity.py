@@ -2,7 +2,8 @@
 from random import randint
 
 import strudel.utils.bioUtils
-from strudel.chop.chopMap import ChopMap, MapParser
+# from strudel.chop.chopMap import ChopMap, MapParser
+from strudel.parse.mapParser import MapParser
 import math
 import numpy as np
 import time
@@ -13,7 +14,7 @@ from strudel.utils import modelMapUtils
 
 
 class ExtractDensity:
-    def __init__(self, map_path=None, model_path=None, adapted_map_path=None, tmp_dir='/tmp/segment_density'):
+    def __init__(self, map_path=None, model_path=None, adapted_map_path=None, work_voxel_size=0.5, tmp_dir='/tmp/segment_density'):
         self.in_map = MapParser(map_path)
         self.cube_map = None
         self.box_size = 10
@@ -23,7 +24,7 @@ class ExtractDensity:
         self.walk_grid = None
         self.operations_counter = 0
         self.max_roll = 5
-        self.work_voxel_size = 0.5
+        self.work_voxel_size = work_voxel_size
         self.interpolator = None
         self.tmp_dir = tmp_dir
         if not os.path.exists(tmp_dir):
@@ -100,19 +101,20 @@ class ExtractDensity:
 
         return prev_ca, next_ca
 
-
     def segment_residue_density(self, model):
 
         c_coord, ca_coord, n_coord, cb_coord = self._get_bb_coordinates(model)
-        print('CB', cb_coord)
+
         ca_index = self.coord_to_index_int(ca_coord, self.in_map)
         ca_map = self.cut_cube_around_voxel(self.in_map, ca_index, self.box_size)
-
+        # print(ca_map.data.shape)
         res_nr = model.id[1]
         prev_ca_coord, next_ca_coord = self.get_flank_ca_coord(model)
 
         # self.cube_map = self.map_resample(ca_map, str(res_nr))
-        self.cube_map = ca_map.grid_resample_emda(self.work_voxel_size)
+        ca_map.grid_resample_emda(self.work_voxel_size)
+        self.cube_map = ca_map
+        # print(self.cube_map.data.shape)
 
         self.update_map_parameters(self.cube_map)
 
@@ -131,31 +133,38 @@ class ExtractDensity:
         else:
             start_coord = ca_coord
         #start_coord = ca_coord
+        print(start_coord)
         side_chain_trace = self.trace_side_chain(start_coord, c_coord, n_coord,
                                                  prev_ca_coord, next_ca_coord,
                                                  self.interpolator, 1.6)
 
         if len(side_chain_trace) > 0:
             ang = self.path_bb_angle(side_chain_trace, c_coord, n_coord)
-            print(ang)
+            # print(ang)
             if ang < math.pi / 4:
-                side_chain_trace = [] + [cb_coord]
+                if cb_coord != []:
+                    side_chain_trace = [cb_coord]
+                else:
+                    side_chain_trace = []
 
 
-        print('Trace', time.time() - start)
+
+
+        # print('Trace', time.time() - start)
 
         #if len(sidechain_trace) > 1:
         #    sidechain_trace = self.exclude_gaps(sidechain_trace)
         residue_trace = [c_coord, ca_coord] + side_chain_trace
+        # print(residue_trace)
         residue_trace = self.connect_trace(residue_trace)
 
         trace_indices = self._coord_lst_to_indices_lst_int(residue_trace, self.cube_map)
         trace_map = self._points_to_map(trace_indices, self.cube_map, 3)
 
-        print(self.operations_counter)
+        # print(self.operations_counter)
         start = time.time()
         mask = self.mask_trace(self.cube_map, trace_indices, 1.5, 1)
-        print('Mask', time.time() - start)
+        # print('Mask', time.time() - start)
 
         indices = self.coord_to_index_int(c_coord, self.cube_map)
         self.walk_grid[indices] = 1.7
@@ -325,16 +334,16 @@ class ExtractDensity:
         return connected_trace
 
     def connect_trace_(self, trace, max_dist=0.8):
-        print(trace)
+        # print(trace)
         connected_trace = [trace[0]]
         for index, point in enumerate(trace[1:]):
             point0 = trace[index-1]
             d = self.distance(point0, point)
-            print('D', d)
+            # print('D', d)
             if d > max_dist:
                 deep_min = self.check_minimum(point0, point)
                 if deep_min:
-                    print('DEEP MIN')
+                    # print('DEEP MIN')
                     break
                 connection_points = int(round(d / max_dist))
                 delta = (point - point0) / connection_points
@@ -412,7 +421,7 @@ class ExtractDensity:
         return cr_pts, cr_vals
 
     def find_local_max_map_value(self, index, map_obj, radius):
-        print(map_obj.data[index])
+        # print(map_obj.data[index])
         values = []
         for i in range(index[0]-radius, index[0]+radius):
             for j in range(index[1] - radius, index[1] + radius):
@@ -420,7 +429,7 @@ class ExtractDensity:
                     val = map_obj.data[i, j, k]
                     values.append(val)
         max_val = max(values)
-        print('Mean',max_val)
+        # print('Mean',max_val)
         return max_val
 
     def trace_side_chain_(self, start_coord, c_coord, n_coord, prev_ca_coord, next_ca_coord, interpolator,
@@ -435,13 +444,13 @@ class ExtractDensity:
         min_thld = self.max_thld * 0.3
 
         ca_int = self.interpolator(self.coord_to_index(start_coord, self.cube_map))
-        print('Start I', ca_int)
+        # print('Start I', ca_int)
         start_index = self.coord_to_index_int(start_coord, self.cube_map)
         loc_max = self.find_local_max_map_value(start_index, self.cube_map, 1)
 
 
-        print('THLD', thld)
-        print('Min thld', min_thld)
+        # print('THLD', thld)
+        # print('Min thld', min_thld)
 
         fused = True
         while fused:
@@ -455,7 +464,7 @@ class ExtractDensity:
             while thld > min_thld and d < 10:
                 delta = thld_delta * self.max_thld
                 thld_range = [thld - delta, thld + delta]
-                print('THLD range', thld_range)
+                # print('THLD range', thld_range)
                 found = False
 
                 local_max_d = 0
@@ -466,7 +475,7 @@ class ExtractDensity:
                                                                    ort_vector, search_center,
                                                                    prev_ca_coord, next_ca_coord,
                                                                    interpolator, thld_range, radius)
-                    print("d!!", d)
+                    # print("d!!", d)
 
                     if d == 0 and radius < max_radius:
                         radius += 0.1
@@ -501,13 +510,13 @@ class ExtractDensity:
         min_thld = self.max_thld * 0.3
 
         ca_int = self.interpolator(self.coord_to_index(start_coord, self.cube_map))
-        print('Start I', ca_int)
+        # print('Start I', ca_int)
         start_index = self.coord_to_index_int(start_coord, self.cube_map)
         loc_max = self.find_local_max_map_value(start_index, self.cube_map, 1)
 
 
-        print('THLD', thld)
-        print('Min thld', min_thld)
+        # print('THLD', thld)
+        # print('Min thld', min_thld)
 
         fused = True
         while fused:
@@ -521,7 +530,7 @@ class ExtractDensity:
             while thld > min_thld and d < 10:
                 delta = thld_delta * self.max_thld
                 thld_range = [thld - delta, thld + delta]
-                print('THLD range', thld_range)
+                # print('THLD range', thld_range)
                 found = False
 
                 local_max_d = 0
@@ -532,7 +541,7 @@ class ExtractDensity:
                                                                    ort_vector, search_center,
                                                                    prev_ca_coord, next_ca_coord,
                                                                    interpolator, thld_range, radius)
-                    print("d!!", d)
+                    # print("d!!", d)
 
                     # This stops the search if it goes too close to the flanking CA
                     if prev_ca_coord is not None and d:
@@ -612,7 +621,7 @@ class ExtractDensity:
                             self.walk_grid[int_indices] = 1.2
             center_indices = self.coord_to_index_int(search_center, self.cube_map)
             self.walk_grid[center_indices] = 1.5
-        print(self.operations_counter)
+        # print(self.operations_counter)
         return max_dist_coord, max_dist
 
     @staticmethod
@@ -623,6 +632,7 @@ class ExtractDensity:
         :param p2: point coordinates
         :return: distance
         """
+        # print(p1, p2)
         d = math.sqrt((p1[0] - p2[0]) ** 2
                       + (p1[1] - p2[1]) ** 2
                       + (p1[2] - p2[2]) ** 2)

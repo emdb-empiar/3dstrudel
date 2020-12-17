@@ -234,6 +234,17 @@ class MapParser:
 
     def grid_resample_emda(self, target_voxel):
         x = self.data
+
+        if x.shape[0] % 2 != 0:
+            xshape = list(x.shape)
+            xshape[0] = xshape[0] + 1
+            xshape[1] = xshape[1] + 1
+            xshape[2] = xshape[2] + 1
+            temp = np.zeros(xshape, x.dtype)
+            temp[:-1, :-1, :-1] = x
+            x = temp
+            self.cell = (self.cell[0] + self.voxel_size[0], self.cell[1] + self.voxel_size[1], self.cell[2] + self.voxel_size[2])
+
         scale = self.voxel_size[0] / target_voxel
         old_grid = x.data.shape
         new_grid = [int(round(i * scale)) for i in old_grid]
@@ -241,14 +252,21 @@ class MapParser:
         # Forward transform
         X = np.fft.fftn(x)
         X = np.fft.fftshift(X)
-
         # Placeholder array for output spectrum
         newshape = list(x.shape)
-        newshape[0] = new_grid[0]
-        newshape[1] = new_grid[1]
-        newshape[2] = new_grid[2]
-        Y = np.zeros(newshape, X.dtype)
 
+        if new_grid[0] % 2 != 0:
+            newshape[0] = new_grid[0] + 1
+            newshape[1] = new_grid[1] + 1
+            newshape[2] = new_grid[2] + 1
+        else:
+            newshape[0] = new_grid[0]
+            newshape[1] = new_grid[1]
+            newshape[2] = new_grid[2]
+
+        if x.shape[0] == newshape[0]:
+            return x
+        Y = np.zeros(newshape, X.dtype)
         # upsampling
         if X.shape[0] < newshape[0]:
             dx = abs(newshape[0] - X.shape[0]) // 2
@@ -266,5 +284,6 @@ class MapParser:
 
         self.data = np.float32((np.fft.ifftn(Y)).real)
         self.m = self.data.shape
-        self.voxel_size = (self.cell[0]/self.m[0], self.cell[1]/self.m[1], self.cell[2]/self.m[2] )
+        self.voxel_size = (self.cell[0]/self.m[0], self.cell[1]/self.m[1], self.cell[2]/self.m[2])
         self.index_shifts = self._calc_index_shift()
+

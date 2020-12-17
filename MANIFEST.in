@@ -1,1 +1,2 @@
 include strudel/lib/strudel/penultimate_lib.json
+include strudel/average/inp/global_reference.pdb
