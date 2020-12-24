@@ -34,10 +34,10 @@ import numpy as np
 import json
 from collections import Counter
 import subprocess
-import strudel.configure as config
-import strudel.utils.functions as func
-from strudel.parse.mapParser import MapParser
-import strudel.average
+import threed_strudel.configure as config
+import threed_strudel.utils.functions as func
+from threed_strudel.parse.mapParser import MapParser
+import threed_strudel.average
 
 
 class MapAveraging:
@@ -92,7 +92,7 @@ class MapAveraging:
 
     @staticmethod
     def get_global_reference_path():
-        head = os.path.dirname(strudel.average.__file__)
+        head = os.path.dirname(threed_strudel.average.__file__)
         path = os.path.join(head, 'inp/global_reference.pdb')
         return path
 

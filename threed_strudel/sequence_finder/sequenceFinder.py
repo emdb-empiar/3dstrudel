@@ -38,11 +38,11 @@ from multiprocessing import Process, Manager
 from distutils.spawn import find_executable
 from Bio.PDB.Polypeptide import PPBuilder
 # from strudel.chop.chopMap import ChopMap
-from strudel.utils import functions as func
-import strudel.configure as config
-from strudel.utils import bioUtils
-from strudel import nomenclature
-from strudel.chop.segmentResidueDensity import ExtractDensity
+from threed_strudel.utils import functions as func
+import threed_strudel.configure as config
+from threed_strudel.utils import bioUtils
+from threed_strudel import nomenclature
+from threed_strudel.chop.segmentResidueDensity import ExtractDensity
 
 log = logging.getLogger(__name__)
 

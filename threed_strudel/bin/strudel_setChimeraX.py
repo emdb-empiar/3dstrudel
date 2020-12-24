@@ -1,11 +1,11 @@
 #!/Users/andrei/PycharmProjects/for_testing/venv/bin/python
 
-import strudel
+import threed_strudel
 import os
 import sys
 from distutils.spawn import find_executable
 
-config_path = os.path.abspath(os.path.join(os.path.dirname(strudel.__file__), 'configure.py'))
+config_path = os.path.abspath(os.path.join(os.path.dirname(threed_strudel.__file__), 'configure.py'))
 
 CHIMERA_PATH = sys.argv[1]
 

@@ -40,7 +40,7 @@ from datetime import datetime, timedelta
 import time
 import argparse
 import json
-from strudel.core.Configure import Configure
+from threed_strudel.core.Configure import Configure
 import subprocess
 
 

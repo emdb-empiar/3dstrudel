@@ -37,7 +37,7 @@ from Bio.PDB.mmcifio import MMCIFIO
 from scipy.cluster.hierarchy import linkage, fcluster, maxdists
 from scipy.spatial import distance as ssd
 from . import nomenclature as nm
-from strudel.utils import modelMapUtils
+from threed_strudel.utils import modelMapUtils
 
 
 def load_structure(model_path):

@@ -1,16 +1,16 @@
 
 from random import randint
 
-import strudel.utils.bioUtils
+import threed_strudel.utils.bioUtils
 # from strudel.chop.chopMap import ChopMap, MapParser
-from strudel.parse.mapParser import MapParser
+from threed_strudel.parse.mapParser import MapParser
 import math
 import numpy as np
 import time
 from numpy import linalg as LA
 import os
 from scipy.interpolate import InterpolatedUnivariateSpline
-from strudel.utils import modelMapUtils
+from threed_strudel.utils import modelMapUtils
 
 
 class ExtractDensity:
@@ -20,7 +20,7 @@ class ExtractDensity:
         self.box_size = 10
         self.max_thld = None
         self.min_thld = None
-        self.in_model = strudel.utils.bioUtils.load_structure(model_path)
+        self.in_model = threed_strudel.utils.bioUtils.load_structure(model_path)
         self.walk_grid = None
         self.operations_counter = 0
         self.max_roll = 5

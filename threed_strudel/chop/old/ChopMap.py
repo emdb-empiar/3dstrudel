@@ -34,7 +34,7 @@ import math
 import subprocess
 import os
 from scipy.interpolate import RegularGridInterpolator
-from strudel.core.Configure import Configure
+from threed_strudel.core.Configure import Configure
 
 
 class ChopMap:

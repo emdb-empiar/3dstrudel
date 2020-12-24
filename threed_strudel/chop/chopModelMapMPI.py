@@ -35,10 +35,10 @@ from multiprocessing import Process, Array
 from mpi4py import MPI
 from random import shuffle
 
-from strudel.chop.chopMap import ChopMap, MapParser
-import strudel.utils.functions as func
-from strudel.utils import bioUtils
-import strudel.nomenclature as nomenclature
+from threed_strudel.chop.chopMap import ChopMap, MapParser
+import threed_strudel.utils.functions as func
+from threed_strudel.utils import bioUtils
+import threed_strudel.nomenclature as nomenclature
 
 
 # noinspection PyTypeChecker

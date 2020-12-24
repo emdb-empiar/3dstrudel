@@ -30,8 +30,8 @@ from random import randint
 import mrcfile
 import numpy as np
 
-from strudel.parse.mapParser import MapParser
-from strudel.utils import bioUtils
+from threed_strudel.parse.mapParser import MapParser
+from threed_strudel.utils import bioUtils
 
 
 class ChopMap:
