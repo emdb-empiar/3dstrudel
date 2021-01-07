@@ -32,7 +32,12 @@ from datetime import datetime
 import time
 import json
 from multiprocessing import Process, Array
-from mpi4py import MPI
+try:
+    from mpi4py import MPI
+    mpi_avail = True
+except ImportError:
+    mpi_avail = False
+
 from random import shuffle
 
 from threed_strudel.chop.chopMap import ChopMap, MapParser
@@ -51,10 +56,11 @@ class ChopModelMap:
     def __init__(self, rank=0, parallelism="shared"):
         self.rank = rank
         self.parallelism = parallelism
-        if self.parallelism == "mpi":
+        if self.parallelism == "mpi" and mpi_avail:
             self.comm = MPI.COMM_WORLD
         else:
             self.comm = None
+            self.parallelism = "shared"
         self.start_time = None
         self.min_rscc = None
         self.no_charged_check = None
