@@ -174,7 +174,7 @@ def score_residue(res_map, res_model, loaded_lib, log):
                 log.error('Chimerax user error!! %s in map %s at sdLevel =  %s', err, lib_vol.name, SD_LEVEL-0.1)
                 log.info('Could not calculate %s and %s correlation', vol.name, lib_vol.name)
                 correlation1 = None
-        matrix = ','.join(f"{x}" for x in tuple(lib_vol.position.matrix.flat))
+        matrix = ','.join(f"{round(x, 5)}" for x in tuple(lib_vol.position.matrix.flat))
         try:
             fit2 = run_x(f'fitmap #{vol.id_string} inMap #{lib_vol.id_string} metric correlation')
             correlation2 = fit2.correlation()
@@ -188,7 +188,7 @@ def score_residue(res_map, res_model, loaded_lib, log):
                 log.info('User error!! %s %s', err, lib_vol.name)
                 correlation2 = None
         if all([correlation1, correlation2]):
-            min_corr = min([correlation1, correlation2])
+            min_corr = round(min([correlation1, correlation2]), 5)
             res_score.append((motif, min_corr, matrix))
         else:
             res_score.append((motif, None, None))

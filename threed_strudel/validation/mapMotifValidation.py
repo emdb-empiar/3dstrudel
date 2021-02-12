@@ -50,6 +50,9 @@ class DictKeys:
     """
     Class for storing the fields names in the output csv file
     """
+    ID = 'id'
+    OUTLIER = 'outlier'
+    DELTA = 'relative_difference'
     RES_TYPE = 'residue_type'
     RES_NR = 'residue_nr'
     CHAIN = 'chain'
@@ -71,6 +74,7 @@ class DictKeys:
     ALL_TOP_MOTIFS = 'all_top_motifs'
     TOP_SAME_TYPE_DIFF = 'top_same_dif'
     COMPLETE_DATA = 'complete_data'
+
 
 
 def dict_list_to_csv(dict_list, csv_path):
@@ -111,12 +115,13 @@ def json_to_full_csv(json_path, csv_path):
     dict_list_to_csv(out_data, csv_path)
 
 
-def csv_to_top_csv(csv_path, out_csv_path):
+def csv_to_top_csv(csv_path, out_csv_path, outlier_diff=0.05):
     """
     Prepares the input file for Strudel Score tool.
     Keeps only the top scoring motif data for each residue type
     :param csv_path: input scv file path
     :param out_csv_path: output scv file path
+    :param outlier_diff: difference for outliers, diff = (top_score-same_type_score) / top_score
     """
     data_frame = []
     k = DictKeys()
@@ -131,9 +136,9 @@ def csv_to_top_csv(csv_path, out_csv_path):
             row_d = {}
             tmp = {}
             if any(['None' in v for v in row.values()]):
-                row_d[k.COMPLETE_DATA] = False
+                row_d[k.COMPLETE_DATA] = 0
             else:
-                row_d[k.COMPLETE_DATA] = True
+                row_d[k.COMPLETE_DATA] = 1
             for key, value in row.items():
                 code = key[:3]
                 if code.upper() in codes:
@@ -181,6 +186,13 @@ def csv_to_top_csv(csv_path, out_csv_path):
                         row_d[k.TOP_CC] = value[0]
                         row_d[k.M_TOP_MATRIX] = value[2]
 
+            diff = (row_d[k.TOP_CC] - row_d[k.SAME_TYPE_CC]) / row_d[k.TOP_CC]
+            row_d[k.DELTA] = round(diff, 4)
+            if diff > outlier_diff:
+                row_d[k.OUTLIER] = 1
+            else:
+                row_d[k.OUTLIER] = 0
+
             for key, value in tmp.items():
                 row_d[key + k.TYPE_TOP_CC] = value[0]
                 row_d[key + k.TYPE_TOP_NAME] = value[1]
@@ -191,11 +203,12 @@ def csv_to_top_csv(csv_path, out_csv_path):
     dict_list_to_csv(data_frame, out_csv_path)
 
 
-def csv_to_top_scores_only_csv(csv_path, out_csv_path):
+def csv_to_top_scores_only_csv(csv_path, out_csv_path, outlier_diff=0.05):
     """
     Keeps only minimum data for the web version of the Strudel Score.
     :param csv_path: input scv file path
     :param out_csv_path: output scv file path
+    :param outlier_diff: difference for outliers, diff = (top_score-same_type_score) / top_score
     """
     data_frame = []
     k = DictKeys()
@@ -205,14 +218,15 @@ def csv_to_top_scores_only_csv(csv_path, out_csv_path):
     with open(csv_path, mode='r') as csv_file:
         csv_reader = csv.DictReader(csv_file)
 
-        for row in csv_reader:
+        for i, row in enumerate(csv_reader):
             codes = nomenclature.AA_RESIDUES_LIST
             row_d = {}
             tmp = {}
-            if any(['None' not in v for v in row.values()]):
-                row_d[k.COMPLETE_DATA] = False
+            row_d[k.ID] = i
+            if any(['None' in v for v in row.values()]):
+                row_d[k.COMPLETE_DATA] = 0
             else:
-                row_d[k.COMPLETE_DATA] = True
+                row_d[k.COMPLETE_DATA] = 1
             for key, value in row.items():
                 code = key[:3]
                 if code.upper() in codes:
@@ -244,10 +258,16 @@ def csv_to_top_scores_only_csv(csv_path, out_csv_path):
                     row_d[k.SAME_TYPE_CC] = value[0]
                 if value[0] is not None:
                     if value[0] > max_correlation:
-                        max_correlation = round(value[0], 5)
+                        max_correlation = value[0]
                         row_d[k.M_TOP_TYPE] = key
-                        row_d[k.TOP_CC] = round(value[0], 5)
+                        row_d[k.TOP_CC] = value[0]
 
+            diff = (row_d[k.TOP_CC] - row_d[k.SAME_TYPE_CC]) / row_d[k.TOP_CC]
+            row_d[k.DELTA] = round(diff, 4)
+            if diff > outlier_diff:
+                row_d[k.OUTLIER] = 1
+            else:
+                row_d[k.OUTLIER] = 0
             for key, value in tmp.items():
                 row_d[key] = value[0]
             data_frame.append(row_d)
@@ -523,6 +543,8 @@ def main():
                         help="Run ChimeraX in verbose mode")
     parser.add_argument("-wl", "--warning_level", dest="warning_level", default='info',
                         help="Log file warning level [info[debug]")
+    parser.add_argument("-diff", "--outlier_difference", dest="diff", required=False, default=0.05, type=float,
+                        help="Outliers threshold, (calculated as: (top_score-same_type_score) / top_score")
 
     args = parser.parse_args()
     if args.log:
@@ -547,8 +569,8 @@ def main():
 
     prefix = os.path.splitext(json_file_path)[0]
     if os.path.exists(prefix + '.csv'):
-        csv_to_top_csv(prefix+'.csv', prefix+'_top.csv')
-        # csv_to_top_scores_only_csv(prefix + '.csv', prefix + '_top_for_web.csv')
+        csv_to_top_csv(prefix+'.csv', prefix+'_top.csv', args.diff)
+        csv_to_top_scores_only_csv(prefix + '.csv', prefix + '_top_for_web.csv')
 
     logging.info('\nElapsed: {}\n{:_^100}'.format(func.report_elapsed(start), ''))
 
