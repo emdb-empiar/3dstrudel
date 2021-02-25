@@ -1,9 +1,9 @@
 
 from random import randint
 
-import threed_strudel.utils.bioUtils
+import threed_strudel.utils.bio_utils
 # from strudel.chop.chopMap import ChopMap, MapParser
-from threed_strudel.parse.mapParser import MapParser
+from threed_strudel.parse.map_parser import MapParser
 import math
 import numpy as np
 import time
@@ -20,7 +20,7 @@ class ExtractDensity:
         self.box_size = 10
         self.max_thld = None
         self.min_thld = None
-        self.in_model = threed_strudel.utils.bioUtils.load_structure(model_path)
+        self.in_model = threed_strudel.utils.bio_utils.load_structure(model_path)
         self.walk_grid = None
         self.operations_counter = 0
         self.max_roll = 5

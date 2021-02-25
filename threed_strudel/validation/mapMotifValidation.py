@@ -37,10 +37,10 @@ import argparse
 from multiprocessing import Process, Manager
 from distutils.spawn import find_executable
 
-from threed_strudel.chop.chopMap import ChopMap
+from threed_strudel.chop.chop_map import ChopMap
 from threed_strudel.utils import functions as func
 import threed_strudel.configure as config
-from threed_strudel.utils import bioUtils
+from threed_strudel.utils import bio_utils
 from threed_strudel import nomenclature
 
 log = logging.getLogger(__name__)
@@ -372,10 +372,10 @@ class ComputeScores:
         :return: segments list file path (json format)
         """
         try:
-            in_model = bioUtils.load_structure(self.in_model)[0]
+            in_model = bio_utils.load_structure(self.in_model)[0]
             log.info('Failed to load structure using "auth" cif records. Attempting to use "label" records')
         except:
-            in_model = bioUtils.load_structure_label_id(self.in_model)[0]
+            in_model = bio_utils.load_structure_label_id(self.in_model)[0]
 
         del_atom_list = []
         for chain in in_model:
@@ -458,10 +458,10 @@ class ComputeScores:
 
                 # cube_map_obj.write_map(res_cube_map_path)
 
-                bioUtils.shift_coord(matrix, residue)
-                struct = bioUtils.residues2structure(residue)
-                bioUtils.save_model(struct, residue_path)
-                side_chain = bioUtils.del_main_chain(residue)
+                bio_utils.shift_coord(matrix, residue)
+                struct = bio_utils.residues2structure(residue)
+                bio_utils.save_model(struct, residue_path)
+                side_chain = bio_utils.del_main_chain(residue)
                 # fin_map = self.chop.chop_soft_radius(side_chain, res_cube_map_path, hard_radius=2, soft_radius=1,)
                 fin_map = self.chop.chop_soft_radius_watershed(side_chain, cube_map_obj, whole_model, radius=2, soft_radius=1, )
                 if np.isnan(np.sum(fin_map.data)):

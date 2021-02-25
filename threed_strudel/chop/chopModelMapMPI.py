@@ -40,9 +40,9 @@ except ImportError:
 
 from random import shuffle
 
-from threed_strudel.chop.chopMap import ChopMap, MapParser
+from threed_strudel.chop.chop_map import ChopMap, MapParser
 import threed_strudel.utils.functions as func
-from threed_strudel.utils import bioUtils
+from threed_strudel.utils import bio_utils
 import threed_strudel.nomenclature as nomenclature
 
 
@@ -149,13 +149,13 @@ class ChopModelMap:
                 start = time.time()
                 self.map_object = MapParser(map_path)
                 self.chop_log.info('Map loaded in: %s', func.report_elapsed(start))
-                self.input_model = bioUtils.load_structure(model_path)
+                self.input_model = bio_utils.load_structure(model_path)
                 if filter_identical_chains:
                     self.input_model = self.delete_identical_chains(self.input_model)
             self.input_model = self.comm.bcast(self.input_model, root=0)
         else:
             self.map_object = MapParser(map_path)
-            self.input_model = bioUtils.load_structure(model_path)
+            self.input_model = bio_utils.load_structure(model_path)
             if filter_identical_chains:
                 self.input_model = self.delete_identical_chains(self.input_model)
 
@@ -226,7 +226,7 @@ class ChopModelMap:
             self.chop_log.info('All chains:')
             self.chop_log.info(' '.join(chain_ids) + '\n')
 
-        classes, max_distances = bioUtils.classify_chains(structure, delta=delta)
+        classes, max_distances = bio_utils.classify_chains(structure, delta=delta)
         duplicates = [cl for cl in classes if len(cl) > 1]
         # if self.rank == 0:
         #     self.chop_log.info(' '.join(classes))
@@ -236,7 +236,7 @@ class ChopModelMap:
                 for cl in duplicates:
                     self.chop_log.info(' '.join(cl))
 
-            unique_best_chains = bioUtils.select_best_chains(structure, self.map_object, classes)
+            unique_best_chains = bio_utils.select_best_chains(structure, self.map_object, classes)
             if self.rank == 0:
                 self.chop_log.info('Selected as best fitting in the map unique chains:')
                 self.chop_log.info(' '.join(unique_best_chains))
@@ -467,9 +467,9 @@ class ChopModelMap:
             # Delete the main chain atoms
             side_chain = residue
             tmp_res_path = os.path.join(tmp_dir, name_prefix + '.cif')
-            struct = bioUtils.residues2structure(residue)
-            bioUtils.save_model(struct, tmp_res_path)
-            residue = bioUtils.load_structure(tmp_res_path)
+            struct = bio_utils.residues2structure(residue)
+            bio_utils.save_model(struct, tmp_res_path)
+            residue = bio_utils.load_structure(tmp_res_path)
             os.remove(tmp_res_path)
             side_chain = self.del_main_chain(side_chain)
 
@@ -489,7 +489,7 @@ class ChopModelMap:
 
             end = time.time()
             resampling_time += (end - start)
-            bioUtils.shift_coord(matrix, side_chain)
+            bio_utils.shift_coord(matrix, side_chain)
             if chopping_mode.lower() == 'hard':
                 fin_map = os.path.join(model_map_dir, name_prefix + self.hard_map_end)
                 # chop.chop_hard_radius(side_chain, cube_new_grid_path, fin_map, self.chop_radius)
@@ -511,11 +511,11 @@ class ChopModelMap:
 
             fin_res = os.path.join(model_map_dir, name_prefix + self.shift_residue_end)
             side_path = os.path.join(side_pdb_dir, name_prefix + self.side_chain_end)
-            side_struct = bioUtils.residues2structure(side_chain)
-            bioUtils.save_model(side_struct, side_path)
-            bioUtils.shift_coord(matrix, residue)
+            side_struct = bio_utils.residues2structure(side_chain)
+            bio_utils.save_model(side_struct, side_path)
+            bio_utils.shift_coord(matrix, residue)
             # res_struct = bioUtils.residues2structure(residue)
-            bioUtils.save_model(residue, fin_res)
+            bio_utils.save_model(residue, fin_res)
         self.chop_log.debug("Time spent on resampling: %s s.", resampling_time)
         if self.rank != 0:
             self.comm.send([res_order_dict, hq, lq], dest=0, tag=1)
@@ -545,13 +545,13 @@ class ChopModelMap:
             if not map_obj_list:
                 return None
 
-            bioUtils.shift_coord(shifts_l[0], self.input_model)
+            bio_utils.shift_coord(shifts_l[0], self.input_model)
 
             # Update the main map object
             self.map_object = map_obj_list[0]
 
             # Save the residue and map which will be actually used for chopping
-            bioUtils.save_model(self.input_model, os.path.join(self.work_dir, self.entry_code + '_shifted.cif'))
+            bio_utils.save_model(self.input_model, os.path.join(self.work_dir, self.entry_code + '_shifted.cif'))
             cut_map_path = os.path.join(self.work_dir, self.entry_code + '_model_part.mrc')
             self.map_object.write_map(cut_map_path)
             self.map_file_path = cut_map_path

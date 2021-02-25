@@ -36,7 +36,7 @@ from collections import Counter
 import subprocess
 import threed_strudel.configure as config
 import threed_strudel.utils.functions as func
-from threed_strudel.parse.mapParser import MapParser
+from threed_strudel.parse.map_parser import MapParser
 import threed_strudel.average
 
 

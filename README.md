@@ -1,4 +1,4 @@
-# 3dstrudel
+# threed_strudel
 # Requirements
 biopython, mrcfile, mpi4py, psutil, scipy
 # Instalation

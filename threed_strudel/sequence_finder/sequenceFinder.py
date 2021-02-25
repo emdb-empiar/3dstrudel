@@ -40,7 +40,7 @@ from Bio.PDB.Polypeptide import PPBuilder
 # from strudel.chop.chopMap import ChopMap
 from threed_strudel.utils import functions as func
 import threed_strudel.configure as config
-from threed_strudel.utils import bioUtils
+from threed_strudel.utils import bio_utils
 from threed_strudel import nomenclature
 from threed_strudel.chop.segmentResidueDensity import ExtractDensity
 
@@ -446,7 +446,7 @@ class ComputeScores:
 
     @staticmethod
     def get_sequence(model_path):
-        model = bioUtils.load_structure(model_path)[0]
+        model = bio_utils.load_structure(model_path)[0]
         ppb = PPBuilder()
         out_pp = []
         for pp in ppb.build_peptides(model):
@@ -661,7 +661,7 @@ class ComputeScores:
 
 
     def score_fragments(self, scores_lst, length, cut_off, model_path, verbose=True):
-        model = bioUtils.load_structure(model_path)[0]
+        model = bio_utils.load_structure(model_path)[0]
         transl = nomenclature.AA_3LET_TO_1LET
         all_frag = []
         not_found = ''

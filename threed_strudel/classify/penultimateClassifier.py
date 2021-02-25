@@ -40,7 +40,7 @@ from Bio.PDB.Superimposer import Superimposer
 
 import threed_strudel.utils.functions as func
 import threed_strudel.nomenclature as nomenclature
-from threed_strudel.utils import bioUtils
+from threed_strudel.utils import bio_utils
 import threed_strudel.lib.strudel.penultimate_rotamer_lib as p_lib
 
 
@@ -192,7 +192,7 @@ class PenultimateClassifier:
         str_object_list = []
         for element in cif_names:
             try:
-                structure = bioUtils.load_structure(os.path.join(self.in_dir, element))
+                structure = bio_utils.load_structure(os.path.join(self.in_dir, element))
             except:
                 # If the residue file could not be read for some reason if will move it
                 self.log.info('Failed to process %s file\nMoving it to and related files %s\nCheck %s for details',
@@ -417,7 +417,7 @@ class PenultimateClassifier:
                 os.makedirs(path)
             for model in classes[index]:
                 model_path = os.path.join(path, model.id + '.cif')
-                bioUtils.save_model(model, model_path)
+                bio_utils.save_model(model, model_path)
                 nr_rotamers += 1
             self.concatenate_residue_models(classes[index], os.path.join(path, 'class_' + str(index + 1) + '.cif'))
 
@@ -426,7 +426,7 @@ class PenultimateClassifier:
             os.makedirs(path)
         for model in classes[-1]:
             model_path = os.path.join(path, model.id + '.cif')
-            bioUtils.save_model(model, model_path)
+            bio_utils.save_model(model, model_path)
             nr_non_rotamers += 1
         self.concatenate_residue_models(classes[-1], os.path.join(path, self.residue_type + '_non-rotameric.cif'))
         self.log.info("%s %s residues were classified as rotameric\n"
@@ -471,7 +471,7 @@ class PenultimateClassifier:
         :param out_file: output file name
         """
         if len(model_obj_list) == 1:
-            bioUtils.save_model(model_obj_list[0], out_file)
+            bio_utils.save_model(model_obj_list[0], out_file)
         elif len(model_obj_list) > 1:
             out_structure = copy.deepcopy(model_obj_list[0])
             out_structure[0].serial_num = 1
@@ -482,7 +482,7 @@ class PenultimateClassifier:
             for model in out_structure:
                 for chain in model:
                     chain.id = 'A'
-            bioUtils.save_model(out_structure, out_file)
+            bio_utils.save_model(out_structure, out_file)
 
     def set_default_rotamer_angle_width(self, width):
         """
