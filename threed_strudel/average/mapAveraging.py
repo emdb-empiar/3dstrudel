@@ -3,9 +3,7 @@ mapAveraging.py
 
 Superimpose and average maps using atom models as guide.
 This code use maps in mrc format
-This code uses Chimera for superimposing. UCSF Chimera packages are
-imported using the pychimera module.
-
+This code uses ChimeraX for superimposing.
 Copyright [2013] EMBL - European Bioinformatics Institute
 Licensed under the Apache License, Version 2.0 (the
 "License"); you may not use this file except in

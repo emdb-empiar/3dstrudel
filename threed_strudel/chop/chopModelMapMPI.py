@@ -632,17 +632,18 @@ class ChopModelMap:
             stat_storage = self.comm.gather(stat_storage, root=0)
         else:
             # shared memory
-            thread_list = []
-            for residue_obj_list in split_all_res_obj_list:
-                t = Process(target=self.chop_worker_task,
-                            args=(residue_obj_list, self.map_object, stat_storage, chop_map, chopping_mode))
-                thread_list.append(t)
-            for thread in thread_list:
-                thread.start()
-            for thread in thread_list:
-                thread.join()
-            self.chop_log.info('Finished chopping\nElapsed: %s', func.report_elapsed(start))
-            self.chop_log.info('%s', '\n{:*^80}\n'.format(''))
+            if __name__ == '__main__':
+                thread_list = []
+                for residue_obj_list in split_all_res_obj_list:
+                    t = Process(target=self.chop_worker_task,
+                                args=(residue_obj_list, self.map_object, stat_storage, chop_map, chopping_mode))
+                    thread_list.append(t)
+                for thread in thread_list:
+                    thread.start()
+                for thread in thread_list:
+                    thread.join()
+                self.chop_log.info('Finished chopping\nElapsed: %s', func.report_elapsed(start))
+                self.chop_log.info('%s', '\n{:*^80}\n'.format(''))
 
         # Build a dictionary to store chopping statistics ( {res_name: [hq_nr, lq_nr]} )
         if self.rank == 0:

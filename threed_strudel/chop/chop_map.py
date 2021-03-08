@@ -335,7 +335,7 @@ class ChopMap:
     def chop_soft_radius_watershed(self, model, in_map, whole_model, shifts=None, out_map=None,
                                    radius=2, soft_radius=1, mask_path=None):
         """
-        note: requires more testing
+        TODO: requires more testing
         Chop map using a soft mask with a given radius (hard_radius + soft_radius) around an amino acid residue residue.
         A cosine function is used to create the soft mask. Similar to chop_soft_radius but avoids
         cutting neighboring residues side chains map. To do so, it finds the closest atom
@@ -433,7 +433,7 @@ class ChopMap:
     def chop_soft_radius_watershed_var2(self, model, in_map, whole_model, shifts=None, out_map=None,
                                         radius=2, soft_radius=1, mask_path=None):
         """
-        note: requires more testing
+        TODO: requires more testing
         Chop map using a soft mask with a given radius (hard_radius + soft_radius) around an amino acid residue residue.
         A cosine function is used to create the soft mask. Similar to chop_soft_radius but avoids
         cutting neighboring residues side chains map. To do so, it creates two masks: a soft edge mask (var: mask)
