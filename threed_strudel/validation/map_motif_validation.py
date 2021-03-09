@@ -22,7 +22,6 @@ __email__ = 'andrei@ebi.ac.uk'
 __date__ = '2018-05-29'
 
 import os
-import sys
 import csv
 import json
 import subprocess

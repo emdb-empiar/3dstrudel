@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from threed_strudel.average import mapAveraging
+from threed_strudel.average import map_averaging
 
 
 if __name__ == '__main__':
-    mapAveraging.main()
+    map_averaging.main()

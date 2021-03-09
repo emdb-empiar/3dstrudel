@@ -37,7 +37,7 @@ from Bio.PDB.mmcifio import MMCIFIO
 from scipy.cluster.hierarchy import linkage, fcluster, maxdists
 from scipy.spatial import distance as ssd
 from . import nomenclature as nm
-from threed_strudel.utils import modelMapUtils
+from threed_strudel.utils import model_map_utils
 
 
 def load_structure(model_path):
@@ -511,7 +511,7 @@ def select_best_chains(structure, map_object, chain_classes, threshold=None):
     """
 
     if threshold is None:
-        threshold = modelMapUtils.find_threshold(structure, map_object, inclusion_fraction=90)
+        threshold = model_map_utils.find_threshold(structure, map_object, inclusion_fraction=90)
 
     if structure.get_level() == 'S':
         model = structure[0]
@@ -527,7 +527,7 @@ def select_best_chains(structure, map_object, chain_classes, threshold=None):
             best_chain = None
             best_inclusion = -1
             for chain in _class:
-                inclusion = modelMapUtils.atom_inclusion(model[chain], map_object, threshold)[2]
+                inclusion = model_map_utils.atom_inclusion(model[chain], map_object, threshold)[2]
                 if inclusion > best_inclusion:
                     best_chain = chain
                     best_inclusion = inclusion

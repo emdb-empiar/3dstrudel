@@ -10,10 +10,10 @@ import time
 from numpy import linalg as LA
 import os
 from scipy.interpolate import InterpolatedUnivariateSpline
-from threed_strudel.utils import modelMapUtils
+from threed_strudel.utils import model_map_utils
 
 
-class ExtractDensity:
+class ExtractMap:
     def __init__(self, map_path=None, model_path=None, adapted_map_path=None, work_voxel_size=0.5, tmp_dir='/tmp/segment_density'):
         self.in_map = MapParser(map_path)
         self.cube_map = None
@@ -121,9 +121,9 @@ class ExtractDensity:
         if self.adapted_map is not None:
             adapted_ca_map = self.cut_cube_around_voxel(self.adapted_map, ca_index, self.box_size)
             adapted_cube_map = adapted_ca_map.grid_resample_emda(self.work_voxel_size)
-            self.interpolator = modelMapUtils.interpolator(adapted_cube_map)
+            self.interpolator = model_map_utils.interpolator(adapted_cube_map)
         else:
-            self.interpolator = modelMapUtils.interpolator(self.cube_map)
+            self.interpolator = model_map_utils.interpolator(self.cube_map)
 
 
 

@@ -42,7 +42,7 @@ from threed_strudel.utils import functions as func
 import threed_strudel.configure as config
 from threed_strudel.utils import bio_utils
 from threed_strudel import nomenclature
-from threed_strudel.chop.segmentResidueDensity import ExtractDensity
+from threed_strudel.chop.segment_residue_map import ExtractMap
 
 log = logging.getLogger(__name__)
 
@@ -237,7 +237,7 @@ class ComputeScores:
         if os.path.exists(segments_list_path):
             return segments_list_path
 
-        self.extract = ExtractDensity(map_path=self.in_map, model_path=self.in_model, work_voxel_size=voxel)
+        self.extract = ExtractMap(map_path=self.in_map, model_path=self.in_model, work_voxel_size=voxel)
         residues = [r for r in self.extract.in_model.get_residues() if r.get_resname().upper() in self.residues]
         # residues = residues[:1]
         log.info('Found %s residues in the input model', len(residues))
