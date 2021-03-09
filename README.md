@@ -30,3 +30,8 @@ The results can be visualised using the Strudel Score plugin for ChimeraX (https
 
     strudel_mapMotifValidation.py [options]
     
+# License
+
+threed_strudel is free and open source software released under the terms of the Apache License, Version 2.0. 
+Source code is copyright EMBL-European Bioinformatics Institute (EMBL-EBI) 2017.
+    
