@@ -72,13 +72,37 @@ def test_find_near_atoms(model_obj):
     assert result == [(188, 'CD1'), (188, 'CG1'), (326, 'CD1')]
 
 
-# def test_chop_soft_radius_watershed(model_obj):
-#
-#     map_obj = MapParser('data/in/chop/ref_res_158.mrc')
-#     local_model = model_obj[0]['A'][158]
-#     chop = ChopMap()
-#     map_obj = chop.chop_soft_radius_watershed(local_model, map_obj, model_obj, radius=2, soft_radius=1)
-#     map_obj.write_map('data/out/chop/watershed/resv1_8_158.mrc')
+def test_chop_soft_radius_watershed():
+    mod_p = '/Volumes/data/Work/covid/new_13_may/11007/bundle_30178_new_chop/input/7btf.cif'
+    map_p = '/Volumes/data/Work/covid/new_13_may/11007/bundle_30178_new_chop/input/emd_30178.map'
+    model_obj = bio_utils.load_structure(mod_p)
+    map_obj = MapParser(map_p)
+    local_model = model_obj[0]['A'][764]
+    chop = ChopMap()
+
+    cube_map_obj, shifts = chop.chop_cube(local_model, map_obj, 4, zero_origin=False)
+    cube_map_obj.grid_resample_emda(0.25)
+    side_chain = bio_utils.del_main_chain(local_model)
+    import time
+
+    t1 = time.time()
+    map_obj_w, mask, outer_mask = chop.chop_soft_radius_watershed(side_chain, cube_map_obj, model_obj, radius=2, soft_radius=1, asymmetric_delta=0.5)
+    print(f"New time: {t1-time.time()}")
+
+    map_obj_w.write_map('/Volumes/data/Work/covid/new_13_may/11007/bundle_30178_new_chop/input/784_5_ccano_asim-0.5.mrc')
+    outer_mask.write_map('/Volumes/data/Work/covid/new_13_may/11007/bundle_30178_new_chop/input/784_5_ccano_asim-0.5_out_mask_nozero5.mrc')
+    # mask.write_map(
+    #     '/Volumes/data/Work/covid/new_13_may/11007/bundle_30178_new_chop/input/784_3_ccano_asim-1_fin_mask.mrc')
+
+    # t1 = time.time()
+    # map_obj_w_old = chop.chop_soft_radius_watershed_old(side_chain, cube_map_obj, model_obj, radius=2,
+    #                                                             soft_radius=1)
+    # print(f"Old time: {t1 - time.time()}")
+    # map_obj_w_old.write_map('/Volumes/data/Work/covid/new_13_may/11007/bundle_30178_new_chop/input/784_2_old.mrc')
+    #
+    # map_obj_w_old = chop.chop_soft_radius(side_chain, cube_map_obj, hard_radius=2,
+    #                                                     soft_radius=1)
+    # map_obj_w_old.write_map('/Volumes/data/Work/covid/new_13_may/11007/bundle_30178_new_chop/input/784_2_soft.mrc')
 #
 #
 # def test_chop_soft_radius_watershed_var2(model_obj):

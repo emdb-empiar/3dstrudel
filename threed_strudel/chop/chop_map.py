@@ -324,16 +324,25 @@ class ChopMap:
         :return: list of biopython atom objects
         """
         close = []
+        print("Atom_parent", atom.parent.id[1], type(atom.parent.id[1]))
         for atom1 in model.get_atoms():
             if atom1.parent.id != atom.parent.id or atom1.parent.parent.id != atom.parent.parent.id:
                 d = atom1 - atom
                 if d < distance:
                     close.append(atom1)
+        close = list(set(close))
+        # Filter out flanking residues BB atoms
+        # close = [a for a in close if a.parent.id[1] not in [atom.parent.id[1]-1, atom.parent.id[1]+1]]
+        filtered = []
+        for a in close:
+            if a.get_name() not in ['N', 'C', 'O', 'CA']:
+                filtered.append(a)
+            elif a.parent.id[1] not in [atom.parent.id[1] - 1, atom.parent.id[1] + 1]:
+                filtered.append(a)
+        return filtered
 
-        return list(set(close))
-
-    def chop_soft_radius_watershed(self, model, in_map, whole_model, shifts=None, out_map=None,
-                                   radius=2, soft_radius=1, mask_path=None):
+    def chop_soft_radius_watershed_old(self, model, in_map, whole_model, shifts=None, out_map=None,
+                                       radius=2, soft_radius=1, mask_path=None):
         """
         TODO: requires more testing
         Chop map using a soft mask with a given radius (hard_radius + soft_radius) around an amino acid residue residue.
@@ -430,28 +439,30 @@ class ChopMap:
 
         return out_map_obj
 
-    def chop_soft_radius_watershed_var2(self, model, in_map, whole_model, shifts=None, out_map=None,
-                                        radius=2, soft_radius=1, mask_path=None):
+    def chop_soft_radius_watershed(self, model, in_map, whole_model, shifts=None, out_map=None,
+                                   radius=2, soft_radius=1, asymmetric_delta=0.5, mask_path=None):
         """
-        TODO: requires more testing
         Chop map using a soft mask with a given radius (hard_radius + soft_radius) around an amino acid residue residue.
         A cosine function is used to create the soft mask. Similar to chop_soft_radius but avoids
         cutting neighboring residues side chains map. To do so, it creates two masks: a soft edge mask (var: mask)
         around the guide model and another soft edge mask (var: outer_mask) around the atoms which are near the guide
         model atoms (d < hard_radius + soft_radius). The final mask is given by: mask = (mask - outer_mask * mask).
         It can be used to chop map around bigger models but may take long for big objects.
+        :param whole_model: biopython model object. The complete model of which the guide model is a part of
+        :param shifts: between model and map
+        :param mask_path: mask output path
         :param model: biopython atomic residue object
         :param in_map: in_dir to the input map
         :param out_map: out_map: in_dir for the chopped map
         :param radius: hard radius
         :param soft_radius: soft radius
+        :param asymmetric_delta:
          """
         # r1 - hard radius for near atoms
-        r1 = 1.5
+        r1 = radius - asymmetric_delta
         # r2 - soft radius for near atoms
-        r2 = 1.0
-        # r12 - hard + soft radius for near atoms
-        r12 = 2.5
+        r2 = r1 + soft_radius
+
         # Get atom coordinates
         if shifts is None:
             shifts = np.array([0, 0, 0])
@@ -479,8 +490,8 @@ class ChopMap:
             xyz = in_map.coord_to_index(atom.coord - shifts)
             xyz_int = in_map.coord_to_index_int(atom.coord - shifts)
 
-            if atom.get_name() not in ['C', 'CA', 'N']:
-                near_atoms += self.find_near_atoms(atom, whole_model, distance=radius + soft_radius)
+            if atom.get_name() not in ['C', 'CA', 'N', 'O']:
+                near_atoms += self.find_near_atoms(atom, whole_model, distance=(radius + soft_radius) * 2)
 
             for x in range(xyz_int[0] - r, xyz_int[0] + r):
                 for y in range(xyz_int[1] - r, xyz_int[1] + r):
@@ -503,6 +514,7 @@ class ChopMap:
                                 pass
         mask[mask > 1] = 1
         near_atoms = list(set(near_atoms))
+        print('NEAR', near_atoms)
         for atom in near_atoms:
             xyz = in_map.coord_to_index(atom.coord - shifts)
             xyz_int = in_map.coord_to_index_int(atom.coord - shifts)
@@ -520,7 +532,7 @@ class ChopMap:
                                 pass
                         elif r1 < d < r2:
                             try:
-                                outer_mask[x, y, z] += (math.cos((math.pi / r2) * (d - r1)) + 1) / 2
+                                outer_mask[x, y, z] += (math.cos((math.pi / soft_radius) * (d - r1)) + 1) / 2
                                 # if intensity value became > 1 it is set to 1
                                 if outer_mask[x, y, z] > 1:
                                     outer_mask[x, y, z] = 1
@@ -542,18 +554,18 @@ class ChopMap:
             mask_ob.data = mask
             mask_ob.write_map(mask_path)
 
-        mask_ob = MapParser('')
-        mask_ob.copy_header(in_map)
-        mask_ob.data = mask
-
-        outer_mask_ob = MapParser('')
-        outer_mask_ob.copy_header(in_map)
-        outer_mask_ob.data = outer_mask
+        # mask_ob = MapParser('')
+        # mask_ob.copy_header(in_map)
+        # mask_ob.data = mask
+        #
+        # outer_mask_ob = MapParser('')
+        # outer_mask_ob.copy_header(in_map)
+        # outer_mask_ob.data = outer_mask
 
         if out_map is not None:
             out_map_obj.write_map(out_map)
 
-        return out_map_obj, mask_ob, outer_mask_ob
+        return out_map_obj  # , mask_ob, outer_mask_ob
 
     @staticmethod
     def chop_hard_radius(model, in_map, out_map, radius=3, mask_path=None):

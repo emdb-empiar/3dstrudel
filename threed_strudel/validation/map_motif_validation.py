@@ -22,6 +22,7 @@ __email__ = 'andrei@ebi.ac.uk'
 __date__ = '2018-05-29'
 
 import os
+import sys
 import csv
 import json
 import subprocess
@@ -319,7 +320,8 @@ class ComputeScores:
             self.lib = os.path.join(self.lib, 'motifs')
             self.check_motif_lib(self.lib)
         else:
-            log.info('Motif library %s not found', lib)
+            log.error('Motif library %s not found', lib)
+            sys.exit()
         self.in_map = os.path.abspath(in_map)
         self.in_model = os.path.abspath(in_model)
 
@@ -462,7 +464,7 @@ class ComputeScores:
                 bio_utils.save_model(struct, residue_path)
                 side_chain = bio_utils.del_main_chain(residue)
                 # fin_map = self.chop.chop_soft_radius(side_chain, res_cube_map_path, hard_radius=2, soft_radius=1,)
-                fin_map = self.chop.chop_soft_radius_watershed(side_chain, cube_map_obj, whole_model, radius=2, soft_radius=1, )
+                fin_map = self.chop.chop_soft_radius_watershed(side_chain, cube_map_obj, whole_model, radius=2, soft_radius=1, )[0]
                 if np.isnan(np.sum(fin_map.data)):
                     log.error("NaN values in {}".format(fin_map_path))
                 fin_map.write_map(fin_map_path)
@@ -549,7 +551,8 @@ def main():
     if args.log:
         log_file = args.log
     else:
-        log_file = os.path.join(args.out, 'map_motif_validation.log')
+        lib_name = os.path.basename(args.lib.rstrip('/'))
+        log_file = os.path.join(args.out, f'map_motif_validation_{lib_name}.log')
 
     if not os.path.exists(args.out):
         os.makedirs(args.out)
