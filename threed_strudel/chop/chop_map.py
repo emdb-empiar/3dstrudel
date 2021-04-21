@@ -30,6 +30,7 @@ import math
 from random import randint
 import numpy as np
 from threed_strudel.parse.map_parser import MapParser
+import threed_strudel.utils.bio_utils as bu
 
 
 class ChopMap:
@@ -71,7 +72,7 @@ class ChopMap:
         return chopped_map_obj_list, shifts_list
 
     @staticmethod
-    def chop_cube(in_model, in_map, cube_padding, zero_origin=True, out_map_path=None):
+    def chop_cube(in_model, in_map, cube_padding=5, zero_origin=True, out_map_path=None):
         """
          Chop map using a cubic box around the model
          :param in_model: biopython model object
@@ -88,6 +89,9 @@ class ChopMap:
             in_map = MapParser(in_map)
         else:
             raise Exception(f'in_map should be MapParser object or a map file path not {type(in_map)}')
+
+        if isinstance(in_model, str):
+            in_model = bu.load_structure(in_model)
 
         atoms_coord = []
         for atom in in_model.get_atoms():
@@ -324,7 +328,7 @@ class ChopMap:
         :return: list of biopython atom objects
         """
         close = []
-        print("Atom_parent", atom.parent.id[1], type(atom.parent.id[1]))
+        # print("Atom_parent", atom.parent.id[1], type(atom.parent.id[1]))
         for atom1 in model.get_atoms():
             if atom1.parent.id != atom.parent.id or atom1.parent.parent.id != atom.parent.parent.id:
                 d = atom1 - atom
@@ -341,7 +345,7 @@ class ChopMap:
                 filtered.append(a)
         return filtered
 
-    def chop_soft_radius_watershed_old(self, model, in_map, whole_model, shifts=None, out_map=None,
+    def chop_soft_radius_watershed_slow(self, model, in_map, whole_model, shifts=None, out_map=None,
                                        radius=2, soft_radius=1, mask_path=None):
         """
         TODO: requires more testing
@@ -486,13 +490,17 @@ class ChopMap:
 
         r = int(round((radius + soft_radius) / aver_voxel_size))
         near_atoms = []
+        import time
+        near_time = 0
         for atom in model.get_atoms():
             xyz = in_map.coord_to_index(atom.coord - shifts)
             xyz_int = in_map.coord_to_index_int(atom.coord - shifts)
 
+            t = time.time()
             if atom.get_name() not in ['C', 'CA', 'N', 'O']:
-                near_atoms += self.find_near_atoms(atom, whole_model, distance=(radius + soft_radius) * 2)
-
+                # near_atoms += self.find_near_atoms(atom, whole_model, distance=(radius + soft_radius) * 2)
+                near_atoms += self.find_near_atoms(atom, whole_model, distance=4)
+            near_time += time.time() - t
             for x in range(xyz_int[0] - r, xyz_int[0] + r):
                 for y in range(xyz_int[1] - r, xyz_int[1] + r):
                     for z in range(xyz_int[2] - r, xyz_int[2] + r):
@@ -514,7 +522,8 @@ class ChopMap:
                                 pass
         mask[mask > 1] = 1
         near_atoms = list(set(near_atoms))
-        print('NEAR', near_atoms)
+        # print('NEAR', len(near_atoms), near_atoms)
+        # print("NEAR time ", near_time)
         for atom in near_atoms:
             xyz = in_map.coord_to_index(atom.coord - shifts)
             xyz_int = in_map.coord_to_index_int(atom.coord - shifts)

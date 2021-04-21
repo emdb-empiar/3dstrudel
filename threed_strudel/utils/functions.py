@@ -124,7 +124,7 @@ def setup_logger(name, log_file=None, warning_level="info"):
     """
     Function setup as many loggers as needed
     :param name: logger name
-    :param log_file: log file in_dir
+    :param log_file: process_log file in_dir
     :param warning_level: warning level
     :return: logger
     """

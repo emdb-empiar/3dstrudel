@@ -45,7 +45,6 @@ import logging
 rc = Command(session)
 SD_LEVEL = 3
 
-
 class DictKeys:
     """
     Class for storing the fields names in the output csv file
@@ -132,28 +131,28 @@ def read_motif_lib(motif_lib_dir):
     return lib_pairs
 
 
-def score_residue(res_map, res_model, loaded_lib, log):
+def score_residue(res_map, res_model, loaded_lib, process_log):
     """
     Scores a residue map against the motif library
     :param res_map: residue map path
     :param res_model: residue model path
     :param loaded_lib: motif library as chimerax objects
-    :param log: logger
+    :param process_log: logger
     :return: residue scores
     """
-    log.info(f'Scoring {os.path.basename(res_map)}, {os.path.basename(res_model)} ')
+    process_log.info(f'Scoring {os.path.basename(res_map)}, {os.path.basename(res_model)} ')
     res_score = []
     # mod = run_x('open ' + res_model)
     # vol = run_x('open ' + res_map)
-    mod = open_model(res_model, log)
-    vol = open_model(res_map, log)
+    mod = open_model(res_model, process_log)
+    vol = open_model(res_map, process_log)
     for motif, lib_mod, lib_vol in loaded_lib:
         mod_sel = '#{}@c,ca,n'.format(mod.id_string)
         lib_mod_sel = '#{}@c,ca,n'.format(lib_mod.id_string)
         try:
             run_x(f'align {lib_mod_sel} to {mod_sel}')
         except:
-            log.error(f'Backbone atoms missing in {os.path.basename(res_model)}. Cannot align! ')
+            process_log.error(f'Backbone atoms missing in {os.path.basename(res_model)}. Cannot align! ')
             res_score.append((motif, None))
             continue
         run_x(f'view position #{lib_vol.id_string} sameAsModels #{lib_mod.id_string}')
@@ -164,28 +163,28 @@ def score_residue(res_map, res_model, loaded_lib, log):
             fit1 = run_x(f'fitmap #{lib_vol.id_string} inMap #{vol.id_string} metric correlation')
             correlation1 = fit1.correlation()
         except Exception as err:
-            log.error('Chimerax user error!! %s in map %s at sdLevel =  %s', err, lib_vol.name, SD_LEVEL)
-            log.info('Changing threshold level to %s', SD_LEVEL - 0.1)
+            process_log.error('Chimerax user error!! %s in map %s at sdLevel =  %s', err, lib_vol.name, SD_LEVEL)
+            process_log.info('Changing threshold level to %s', SD_LEVEL - 0.1)
             try:
                 run_x(f'volume #{lib_vol.id_string} sdLevel {SD_LEVEL - 0.1}')
                 fit1 = run_x(f'fitmap #{lib_vol.id_string} inMap #{vol.id_string} metric correlation')
                 correlation1 = fit1.correlation()
             except Exception as err:
-                log.error('Chimerax user error!! %s in map %s at sdLevel =  %s', err, lib_vol.name, SD_LEVEL-0.1)
-                log.info('Could not calculate %s and %s correlation', vol.name, lib_vol.name)
+                process_log.error('Chimerax user error!! %s in map %s at sdLevel =  %s', err, lib_vol.name, SD_LEVEL - 0.1)
+                process_log.info('Could not calculate %s and %s correlation', vol.name, lib_vol.name)
                 correlation1 = None
         matrix = ','.join(f"{round(x, 5)}" for x in tuple(lib_vol.position.matrix.flat))
         try:
             fit2 = run_x(f'fitmap #{vol.id_string} inMap #{lib_vol.id_string} metric correlation')
             correlation2 = fit2.correlation()
         except Exception as err:
-            log.info('User error!! %s %s', err, lib_vol.name)
+            process_log.info('User error!! %s %s', err, lib_vol.name)
             try:
                 run_x(f'volume #{vol.id_string} sdLevel {SD_LEVEL - 0.1}')
                 fit2 = run_x(f'fitmap #{vol.id_string} inMap #{lib_vol.id_string} metric correlation')
                 correlation2 = fit2.correlation()
             except Exception as err:
-                log.info('User error!! %s %s', err, lib_vol.name)
+                process_log.info('User error!! %s %s', err, lib_vol.name)
                 correlation2 = None
         if all([correlation1, correlation2]):
             min_corr = round(min([correlation1, correlation2]), 5)
@@ -209,20 +208,51 @@ def capture_memory_usage():
     return p.pid, mem.rss / 1000000
 
 
+def setup_logger(name, log_file=None, warning_level="info"):
+    """
+    Function setup as many loggers as needed
+    :param name: logger name
+    :param log_file: process_log file in_dir
+    :param warning_level: warning level
+    :return: logger
+    """
+    if warning_level.lower() == 'debug':
+        warning_level = logging.DEBUG
+    else:
+        warning_level = logging.INFO
+    formatter = logging.Formatter('%(levelname)s:  %(message)s')
+    if log_file:
+        handler = logging.FileHandler(log_file)
+    else:
+        handler = logging.StreamHandler()
+    handler.setFormatter(formatter)
+
+    logger = logging.getLogger(name)
+    logger.setLevel(warning_level)
+    # Remove old handlers
+    for h in logger.handlers:
+        logger.removeHandler(h)
+    logger.addHandler(handler)
+
+    return logger
+
+
 def slave(pairs_list, lib, score_list, lock, json_out_path, csv_out_path=None, close_rate=50):
     p = psutil.Process()
-    log = logging.getLogger(str(p.pid))
+    # process_log = logging.getLogger(str(p.pid))
+    #
+    # process_log.basicConfig(filename='process_logs/' + str(p.pid) + '.process_log', level=logging.INFO,
+    #                     format='%(levelname)s:  %(message)s')
+    process_log = setup_logger(str(p.pid), log_file='process_logs/' + str(p.pid))
 
-    logging.basicConfig(filename='process_logs/' + str(p.pid) + '.log', level=logging.INFO,
-                        format='%(levelname)s:  %(message)s')
     def load_lib():
-        log.info('Loading motif library')
+        process_log.debug('Loading motif library')
         l_lib = []
         for mot in lib:
             # mod = run_x('open ' + mot[1])
             # vol = run_x('open ' + mot[2])
-            mod = open_model(mot[1], log)
-            vol = open_model(mot[2], log)
+            mod = open_model(mot[1], process_log)
+            vol = open_model(mot[2], process_log)
             l_lib.append([mot[0], mod, vol])
         return l_lib
 
@@ -240,7 +270,7 @@ def slave(pairs_list, lib, score_list, lock, json_out_path, csv_out_path=None, c
         # with open(f'{p_id}.txt', 'a') as f:
         #     f.write(f'{mem}\n')
 
-        res_scores = score_residue(pair[0], pair[1], loaded_lib, log)
+        res_scores = score_residue(pair[0], pair[1], loaded_lib, process_log)
 
         res_name = os.path.basename(pair[1]).split('.')[0]
         name_lst = res_name.split('-')
@@ -277,9 +307,10 @@ def slave(pairs_list, lib, score_list, lock, json_out_path, csv_out_path=None, c
         lock.release()
 
 
-def score_structure(known_correlations, unknown_pairs, lib, json_out_path, csv_out_path=None, np=4):
+def score_structure(known_correlations, unknown_pairs, lib, json_out_path, main_log, csv_out_path=None, np=4):
     """
     Scores
+    :param log_file:
     :param known_correlations:
     :param unknown_pairs:
     :param lib:
@@ -288,6 +319,8 @@ def score_structure(known_correlations, unknown_pairs, lib, json_out_path, csv_o
     :param np: number of cores
     :return:
     """
+    if len(unknown_pairs) == 0:
+        return
     log_tmp = 'process_logs'
 
     if not os.path.exists(log_tmp):
@@ -322,9 +355,11 @@ def score_structure(known_correlations, unknown_pairs, lib, json_out_path, csv_o
             for item in scores_list_out:
                 writer.writerow(item)
     # Combine logs
-    combine_files(log_tmp, 'score_' + datetime.now().strftime("%Y-%m-%d") + '.log')
-    if os.path.exists(log_tmp):
-        rmtree(log_tmp)
+    stream_slave_logs(log_tmp, main_log)
+    # combine_files(log_tmp, log_file)
+    # if os.path.exists(log_tmp):
+    #     rmtree(log_tmp)
+
 
 def combine_files(dir_path, out_file):
     files = os.listdir(dir_path)
@@ -336,6 +371,19 @@ def combine_files(dir_path, out_file):
                 with open(os.path.join(dir_path, file), 'r') as infile:
                     for line in infile:
                         outfile.write(line)
+
+
+def stream_slave_logs(logs_dir, main_log):
+    files = os.listdir(logs_dir)
+    files = [f for f in files if not f.startswith('.')]
+    for i, file in enumerate(files):
+        with open(os.path.join(logs_dir, file), 'r') as infile:
+            lines = infile.readlines()
+            try:
+                lines[-1] = lines[-1].rstrip()
+            except IndexError:
+                pass
+            main_log.info(f'rank {i}' + '\n' + ''.join(lines))
 
 
 
@@ -403,12 +451,16 @@ def main():
     parser = argparse.ArgumentParser(description='Score map')
     parser.add_argument("-p", "--pair_list", dest="pair_list", required=True,
                         help="List of residue map, residue pdb paths as json file")
-    parser.add_argument("-l", "--lib", dest="lib", required=True, help="Motif library in_dir")
+    parser.add_argument("-sl", "--strudel_lib", dest="lib", required=True, help="Motif library in_dir")
     parser.add_argument("-np", "--n_processors", dest="np", required=False, help="Number of processors")
     parser.add_argument("-r", "--recompute", dest="recompute", action='store_true',
                         help="Recalculate correlations")
     parser.add_argument("-o", "--out", dest="out", required=True, help="Out json file in_dir")
+    parser.add_argument("-l", "--log", dest="log", required=True, help="Log file")
     args = parser.parse_args()
+
+    log = setup_logger('main', args.log)
+
     # print(args.pair_list)
     pair_list = read_json(args.pair_list)
     lib = read_motif_lib(args.lib)
@@ -422,7 +474,9 @@ def main():
             except (FileNotFoundError, json.decoder.JSONDecodeError) as _:
                 pass
         if inp_correlations:
+            log.info('Results from a previous run were found. Checking the data...')
             known_correlations = check_known_correlations(inp_correlations, lib)
+            log.info(f'Found scores for {len(known_correlations)} out of {len(pair_list)} residues')
             pair_list = exclude_known_pairs(pair_list, known_correlations)
             # for p in pair_list:
             #     print(p)
@@ -433,7 +487,15 @@ def main():
 
     head, tail = os.path.split(args.out)
     csv_path = os.path.join(head, tail.split('.')[0] + '.csv')
-    score_structure(known_correlations, pair_list, lib, args.out,  csv_path, np=int(args.np))
+
+    score_structure(known_correlations=known_correlations,
+                    unknown_pairs=pair_list,
+                    lib=lib,
+                    json_out_path=args.out,
+                    main_log=log,
+                    csv_out_path=csv_path,
+                    np=int(args.np))
+
     print(f'Run time = {time.time()-start}')
     run_x('exit')
 

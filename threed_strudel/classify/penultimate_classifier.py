@@ -70,7 +70,7 @@ class PenultimateClassifier:
                when minimal width flag is True
         :param use_minimal_width: BOOLEAN
         :param warning_level: info, debug
-        :param log_path: path for the log
+        :param log_path: path for the process_log
         """
         self.in_dir = in_dir
         self.log_path = log_path
@@ -160,11 +160,11 @@ class PenultimateClassifier:
 
     def setup_log(self, warning_level):
         """
-        Setup log
+        Setup process_log
         :param warning_level:
         :return:
         """
-        class_log = func.setup_logger('log', self.log_path, warning_level=warning_level)
+        class_log = func.setup_logger('process_log', self.log_path, warning_level=warning_level)
         return class_log
 
     def setup_model_read_error_out(self):

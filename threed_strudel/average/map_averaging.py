@@ -424,7 +424,7 @@ def main():
                         help="Image scaling normalization: 'normalise-all' - full intensity range, "
                              "'normalise-positive' - negative values are sett to 0 "
                              "'standardise' - standardisation (x-mean)/std")
-    parser.add_argument("-l", "-log", dest="log", default=None, help="Log file path")
+    parser.add_argument("-l", "-process_log", dest="process_log", default=None, help="Log file path")
     parser.add_argument("-nr", "--rel_nr", dest="rel_nr", default=10, help="Minimum number of maps for a reliable motif")
     args = parser.parse_args()
     MapAveraging(args.m_dir, args.r_dir, args.rot_prefix, args.class_prefix, args.box,

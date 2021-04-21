@@ -86,22 +86,26 @@ def test_chop_soft_radius_watershed():
     import time
 
     t1 = time.time()
-    map_obj_w, mask, outer_mask = chop.chop_soft_radius_watershed(side_chain, cube_map_obj, model_obj, radius=2, soft_radius=1, asymmetric_delta=0.5)
-    print(f"New time: {t1-time.time()}")
+    # map_obj_w, mask, outer_mask = chop.chop_soft_radius_watershed(side_chain, cube_map_obj, model_obj, radius=2, soft_radius=1, asymmetric_delta=0.5)
+    map_obj_w = chop.chop_soft_radius_watershed(side_chain, cube_map_obj, model_obj, radius=2,
+                                                                  soft_radius=1, asymmetric_delta=0.5)
+    print(f"New time: {time.time()-t1}")
 
-    map_obj_w.write_map('/Volumes/data/Work/covid/new_13_may/11007/bundle_30178_new_chop/input/784_5_ccano_asim-0.5.mrc')
-    outer_mask.write_map('/Volumes/data/Work/covid/new_13_may/11007/bundle_30178_new_chop/input/784_5_ccano_asim-0.5_out_mask_nozero5.mrc')
+    map_obj_w.write_map('/Volumes/data/Work/covid/new_13_may/11007/bundle_30178_new_chop/input/784_5_ccano_asim-0.5_tmp.mrc')
+    # outer_mask.write_map('/Volumes/data/Work/covid/new_13_may/11007/bundle_30178_new_chop/input/784_5_ccano_asim-0.5_out_mask_nozero5.mrc')
     # mask.write_map(
     #     '/Volumes/data/Work/covid/new_13_may/11007/bundle_30178_new_chop/input/784_3_ccano_asim-1_fin_mask.mrc')
 
     # t1 = time.time()
     # map_obj_w_old = chop.chop_soft_radius_watershed_old(side_chain, cube_map_obj, model_obj, radius=2,
     #                                                             soft_radius=1)
-    # print(f"Old time: {t1 - time.time()}")
+    # print(f"Old time: {time.time()-t1}")
+    # t1 = time.time()
     # map_obj_w_old.write_map('/Volumes/data/Work/covid/new_13_may/11007/bundle_30178_new_chop/input/784_2_old.mrc')
     #
     # map_obj_w_old = chop.chop_soft_radius(side_chain, cube_map_obj, hard_radius=2,
     #                                                     soft_radius=1)
+    # print(f"no env time: {time.time() - t1}")
     # map_obj_w_old.write_map('/Volumes/data/Work/covid/new_13_may/11007/bundle_30178_new_chop/input/784_2_soft.mrc')
 #
 #

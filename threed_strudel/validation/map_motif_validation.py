@@ -286,14 +286,17 @@ class ComputeScores:
         self.score_chimera_script = os.path.join(basedir, 'score_chimerax.py')
         self.segmented_pairs = 'segments_list.json'
         self.scores_file = 'scores.json'
+        self.score_log = 'scores.log'
         self.work_grid_sampling = 0.25
         self.chopped_pairs = Manager().list()
+        self.chopped_res_names = Manager().list()
         self.chop = ChopMap()
         self.segments = None
         self.work_dir = None
         self.lib = None
         self.in_map = None
         self.in_model = None
+        self.nr_residues = None
         self.input = None
         self.out_dir = None
 
@@ -389,6 +392,7 @@ class ComputeScores:
             del in_model[chain][res][atom]
 
         residues = [r for r in in_model.get_residues() if r.get_resname().upper() in self.residues]
+        self.nr_residues = len(residues)
         # residues = residues[:]
         log.info('Found %s residues in the input model', len(residues))
         log.info('Running map chopping using %s cores', n_cores)
@@ -412,6 +416,7 @@ class ComputeScores:
             out_pairs.append(i)
 
         segments_list_path = os.path.join(self.segments, self.segmented_pairs)
+
         if not os.path.exists(segments_list_path):
             func.save_json(segments_list_path, out_pairs)
         else:
@@ -450,6 +455,7 @@ class ComputeScores:
             fin_map_path = os.path.join(work_dir, name_prefix + '_soft.mrc')
             residue_path = os.path.join(work_dir, name_prefix + '.cif')
 
+
             if not os.path.exists(fin_map_path) or not os.path.exists(residue_path) or replace:
                 # map_obj_list[i].write_map(cube_map_path)
                 cube_map_obj = map_obj_list[i]
@@ -464,12 +470,16 @@ class ComputeScores:
                 bio_utils.save_model(struct, residue_path)
                 side_chain = bio_utils.del_main_chain(residue)
                 # fin_map = self.chop.chop_soft_radius(side_chain, res_cube_map_path, hard_radius=2, soft_radius=1,)
-                fin_map = self.chop.chop_soft_radius_watershed(side_chain, cube_map_obj, whole_model, radius=2, soft_radius=1, )[0]
+                fin_map = self.chop.chop_soft_radius_watershed(side_chain, cube_map_obj, whole_model,
+                                                               radius=2, soft_radius=1, )
                 if np.isnan(np.sum(fin_map.data)):
-                    log.error("NaN values in {}".format(fin_map_path))
+                    fin_map.data[np.isnan(fin_map.data)] = 0
+                    log.warning("NaN values in {}\n"
+                                "NaN values were replaced by 0 in further calculations.".format(fin_map_path))
                 fin_map.write_map(fin_map_path)
 
             self.chopped_pairs.append((fin_map_path, residue_path))
+            self.chopped_res_names.append(name_prefix)
 
     def compute_correlations(self, pairs_json, n_cores=4, recompute=False, verbose=False):
         """
@@ -497,11 +507,31 @@ class ComputeScores:
         pairs_json = os.path.abspath(pairs_json)
         json_out = os.path.join(self.out_dir, self.scores_file)
         json_out = os.path.abspath(json_out)
+        log_path = os.path.join(self.out_dir, self.score_log)
+        if os.path.exists(log_path):
+            shutil.copy(log_path, log_path + '_back')
+            os.remove(log_path)
 
         command = f'{self.chimera_path} --nogui {v_flag} {updated_script}' \
-                  f' -p {pairs_json} -l {self.lib} -np {n_cores} -o {json_out} {recompute} > chimera.log'
+                  f' -p {pairs_json} -sl {self.lib} -np {n_cores} -o {json_out} {recompute} ' \
+                  f'-l {self.score_log} > chimera.log'
 
         subprocess.call(command, cwd=self.out_dir, shell=True)
+        try:
+            with open(log_path, 'r') as f:
+                lines = f.readlines()
+                try:
+                    ln = len(lines[0].split()[0])
+                    lines[0] = lines[0][ln+2:]
+                except IndexError:
+                    pass
+                try:
+                    lines[-1] = lines[-1].rstrip()
+                except IndexError:
+                    pass
+                log.info(''.join(lines))
+        except FileNotFoundError:
+            pass
         return json_out
 
     @staticmethod
@@ -526,6 +556,37 @@ class ComputeScores:
                 of.write(line)
         return updated_script_path
 
+    @staticmethod
+    def check_scores_completeness(segmented_residues, top_csv_file, scoring_log):
+        k = DictKeys()
+        scored = []
+        complete = True
+        with open(top_csv_file, mode='r') as csv_file:
+            csv_reader = csv.DictReader(csv_file)
+
+            for row in csv_reader:
+                name = f'{row[k.RES_TYPE]}-{row[k.RES_NR]}-{row[k.CHAIN]}'
+                scored.append(name)
+                if not int(row[k.COMPLETE_DATA]):
+                    complete = False
+                    log.warning(f'The data for residue {name} is not complete.'
+                                f' Check {scoring_log} for details')
+            not_scored = []
+            for name in segmented_residues:
+                if name not in scored:
+                    not_scored.append(name)
+                    complete = False
+
+            if len(not_scored) == 1:
+                log.warning(f'Residue {not_scored[0]} was not scored. '
+                            f'Please restart the program with the same input parameters.')
+            elif len(not_scored) > 1:
+                log.warning(f'Residues {", ".join(not_scored)} were not scored.\n'
+                            f'Please restart the program with the same input parameters.')
+        if complete:
+            log.info("Validation completed successfully")
+        return complete
+                    
 
 def main():
     parser = argparse.ArgumentParser(description='Map Validation')
@@ -548,16 +609,11 @@ def main():
                         help="Outliers threshold, (calculated as: (top_score-same_type_score) / top_score")
 
     args = parser.parse_args()
-    if args.log:
-        log_file = args.log
-    else:
-        lib_name = os.path.basename(args.lib.rstrip('/'))
-        log_file = os.path.join(args.out, f'map_motif_validation_{lib_name}.log')
 
     if not os.path.exists(args.out):
         os.makedirs(args.out)
 
-    logging.basicConfig(filename=log_file, level=logging.INFO, format='%(levelname)s:  %(message)s')
+    logging.basicConfig(filename=args.log, level=logging.INFO, format='%(levelname)s:  %(message)s')
     date_time = datetime.now().strftime("%H:%M:%S %Y-%m-%d")
     logging.info('\n{:_^100}'.format('MapMotifValidation') + '\n\nStarted: {}\n'.format(date_time))
 
@@ -567,14 +623,18 @@ def main():
     compute = ComputeScores()
     compute.set_paths(work_dir=args.out, lib=args.lib, in_map=args.in_map, in_model=args.in_model)
     chopped_pairs = compute.chop_structure(n_cores=args.np, voxel=args.voxel, replace=args.recompute_segments)
+
+    # correlations_log = f'score_{datetime.now().strftime("%Y-%m-%d")}.log'
     json_file_path = compute.compute_correlations(chopped_pairs, args.np, args.recompute_scores, verbose=args.v_c)
 
     prefix = os.path.splitext(json_file_path)[0]
     if os.path.exists(prefix + '.csv'):
         csv_to_top_csv(prefix+'.csv', prefix+'_top.csv', args.diff)
+        compute.check_scores_completeness(compute.chopped_res_names, prefix + '_top.csv', compute.score_log)
         csv_to_top_scores_only_csv(prefix + '.csv', prefix + '_top_for_web.csv')
 
-    logging.info('\nElapsed: {}\n{:_^100}'.format(func.report_elapsed(start), ''))
+
+    logging.info('Elapsed: {}\n{:_^100}'.format(func.report_elapsed(start), ''))
 
 
 if __name__ == '__main__':

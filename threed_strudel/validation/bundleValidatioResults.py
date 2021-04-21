@@ -29,7 +29,7 @@ def main():
     parser = argparse.ArgumentParser(description='Map Validation')
     parser.add_argument("-i", "--input", dest="inp", required=True, help="Strudel map motif validation output directory")
     parser.add_argument("-o", "--out", dest="out", required=True, help="Output directory")
-    parser.add_argument("-log", "--log", dest="log", default=None, required=False, help="Log file")
+    parser.add_argument("-process_log", "--process_log", dest="process_log", default=None, required=False, help="Log file")
     parser.add_argument("-v", "--voxel", dest="voxel", required=False, default=0.25, type=float, help="Segments voxel size")
     parser.add_argument("-r", "--recompute", dest="recompute_scores", action='store_true',
                         help="Recalculate correlations")
@@ -44,7 +44,7 @@ def main():
     if args.log:
         log_file = args.log
     else:
-        log_file = os.path.join(args.out, 'map_motif_validation.log')
+        log_file = os.path.join(args.out, 'map_motif_validation.process_log')
 
     if not os.path.exists(args.out):
         os.makedirs(args.out)

@@ -219,7 +219,7 @@ class ComputeScores:
         """
         # try:
         #     in_model = bioUtils.load_structure(self.in_model)[0]
-        #     log.info('Failed to load structure using "auth" cif records. Attempting to use "label" records')
+        #     process_log.info('Failed to load structure using "auth" cif records. Attempting to use "label" records')
         # except:
         #     in_model = bioUtils.load_structure_label_id(self.in_model)[0]
 
@@ -341,7 +341,7 @@ class ComputeScores:
             sd = ''
 
         command = f'{self.chimera_path} --nogui {v_flag} {updated_script}' \
-                  f' -s {pairs_json} -m {self.in_model} -l {self.lib} -np {n_cores} {sd} -o {json_out} {recompute} > chimera.log'
+                  f' -s {pairs_json} -m {self.in_model} -l {self.lib} -np {n_cores} {sd} -o {json_out} {recompute} > chimera.process_log'
 
         subprocess.call(command, cwd=self.out_dir, shell=True)
         return json_out
@@ -704,7 +704,7 @@ def main():
     parser.add_argument("-l", "--lib", dest="lib", required=False, help="Strudel motif library path")
     parser.add_argument("-np", "--n_processors", dest="np", required=False, default=2, help="Number of processors")
     parser.add_argument("-o", "--out", dest="out", required=True, help="Output directory")
-    parser.add_argument("-log", "--log", dest="log", default=None, required=False, help="Log file")
+    parser.add_argument("-process_log", "--process_log", dest="process_log", default=None, required=False, help="Log file")
     parser.add_argument("-v", "--voxel", dest="voxel", required=False, default=0.25, type=float, help="Segments voxel size")
     parser.add_argument("-r", "--recompute", dest="recompute_scores", action='store_true',
                         help="Recalculate correlations")
@@ -724,7 +724,7 @@ def main():
     if args.log:
         log_file = args.log
     else:
-        log_file = os.path.join(args.out, 'sequence_finder.log')
+        log_file = os.path.join(args.out, 'sequence_finder.process_log')
 
     if not os.path.exists(args.out):
         os.makedirs(args.out)

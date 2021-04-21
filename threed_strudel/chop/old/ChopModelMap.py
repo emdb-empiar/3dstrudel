@@ -121,7 +121,7 @@ class ChopModelMap:
             raise Exception('Please provide a the input residue in PDB or CIF format')
         self.input_model_path = input_model
         self.map_file_path = map_file_dir
-        # Setup log
+        # Setup process_log
         try:
             self.chop_log.removeHandler()
         except:
@@ -719,7 +719,7 @@ def main():
         start = time.time()
         job = '{}_{}_{}_{}'.format(record[0], parameters["chopping_mode"], 'grid', parameters["final_voxel"])
         work_dir = os.path.join(out_dir, job)
-        log_path = os.path.join(work_dir, job + '.log')
+        log_path = os.path.join(work_dir, job + '.process_log')
         chop.set_env(work_dir, record[0], record[1], record[2], log_path)
         chop.set_map_chop_parameters(parameters["cube_radius"], parameters["final_voxel"], parameters["chop_radius"],
                                      parameters["chop_soft_radius"], parameters["inclusion_fraction"])
