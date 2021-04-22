@@ -607,6 +607,8 @@ def main():
                         help="Log file warning level [info[debug]")
     parser.add_argument("-diff", "--outlier_difference", dest="diff", required=False, default=0.05, type=float,
                         help="Outliers threshold, (calculated as: (top_score-same_type_score) / top_score")
+    parser.add_argument("-s", "--keep_segments", dest="segm", action='store_true',
+                        help="Keep residues segments after finishing")
 
     args = parser.parse_args()
 
@@ -615,7 +617,8 @@ def main():
 
     logging.basicConfig(filename=args.log, level=logging.INFO, format='%(levelname)s:  %(message)s')
     date_time = datetime.now().strftime("%H:%M:%S %Y-%m-%d")
-    logging.info('\n{:_^100}'.format('MapMotifValidation') + '\n\nStarted: {}\n'.format(date_time))
+    logging.info('\n{:_^100}'.format('MapMotifValidation') + '\n\nRun command:\n' +
+                 ' '.join(sys.argv) + '\n\nStarted: {}\n'.format(date_time))
 
     args.np = int(args.np)
     start = time.time()
@@ -633,6 +636,13 @@ def main():
         compute.check_scores_completeness(compute.chopped_res_names, prefix + '_top.csv', compute.score_log)
         csv_to_top_scores_only_csv(prefix + '.csv', prefix + '_top_for_web.csv')
 
+    if not args.segm:
+        logging.info('Cleaning temporary files...')
+        shutil.rmtree(compute.segments)
+        out_files = os.listdir(compute.out_dir)
+        tmp_files = [f for f in out_files if f.endswith('_bak')]
+        for tmp in tmp_files:
+            os.remove(os.path.join(compute.out_dir, tmp))
 
     logging.info('Elapsed: {}\n{:_^100}'.format(func.report_elapsed(start), ''))
 
