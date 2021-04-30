@@ -31,7 +31,8 @@ from random import randint
 import numpy as np
 from threed_strudel.parse.map_parser import MapParser
 import threed_strudel.utils.bio_utils as bu
-
+import psutil
+p = psutil.Process()
 
 class ChopMap:
     """
@@ -61,6 +62,14 @@ class ChopMap:
          :param zero_origin: boolean,
          :return: list of map objects, list of translation matrices
          """
+
+        if isinstance(in_map, MapParser):
+            pass
+        elif os.path.exists(in_map):
+            in_map = MapParser(in_map)
+        else:
+            raise Exception(f'in_map should be MapParser object or a map file path not {type(in_map)}')
+
         shifts_list = []
         chopped_map_obj_list = []
 
@@ -301,8 +310,20 @@ class ChopMap:
                                 pass
 
         # Apply the mask to the map data
-        final = (mask * in_map.data)
+        in_map.data = in_map.data * 1000
 
+        final = (mask * (in_map.data))
+        # print('final', final[3,3,3])
+        # print(final[1][1][:])
+        # final[final < 0] = 0
+        # print(final[1][1][:])
+        # import sys
+        # np.set_printoptions(threshold=sys.maxsize)
+        # print('out\n\n\n')
+        # # print(in_map.data)
+        # print('Inp max', np.max(in_map.data))
+        # # print(final)
+        # print('out max', np.max(final))
         out_map_obj = MapParser('')
         out_map_obj.copy_header(in_map)
         out_map_obj.data = final
@@ -345,6 +366,12 @@ class ChopMap:
                 filtered.append(a)
         return filtered
 
+
+    @staticmethod
+    def print_mem():
+        mem = psutil.Process(p.pid).memory_info()
+        return mem.rss / 1000000
+
     def chop_soft_radius_watershed_slow(self, model, in_map, whole_model, shifts=None, out_map=None,
                                        radius=2, soft_radius=1, mask_path=None):
         """
@@ -382,7 +409,6 @@ class ChopMap:
         mask = np.zeros(shape, dtype='float32')
 
         r = int(round((radius + soft_radius) / aver_voxel_size))
-
         for atom in model.get_atoms():
             xyz = in_map.coord_to_index(atom.coord - shifts)
             xyz_int = in_map.coord_to_index_int(atom.coord - shifts)
@@ -425,9 +451,7 @@ class ChopMap:
                             except IndexError:
                                 pass
         mask[mask > 1] = 1
-
         final = (mask * in_map.data)
-
         out_map_obj = MapParser('')
         out_map_obj.copy_header(in_map)
         out_map_obj.data = final
@@ -440,7 +464,6 @@ class ChopMap:
 
         if out_map is not None:
             out_map_obj.write_map(out_map)
-
         return out_map_obj
 
     def chop_soft_radius_watershed(self, model, in_map, whole_model, shifts=None, out_map=None,
@@ -548,7 +571,6 @@ class ChopMap:
                             except IndexError:
                                 pass
         outer_mask[outer_mask > 1] = 1
-
         outer_mask[mask == 0] = 0
         mask = (mask - outer_mask * mask)
         final = (mask * in_map.data)
@@ -573,7 +595,6 @@ class ChopMap:
 
         if out_map is not None:
             out_map_obj.write_map(out_map)
-
         return out_map_obj  # , mask_ob, outer_mask_ob
 
     @staticmethod

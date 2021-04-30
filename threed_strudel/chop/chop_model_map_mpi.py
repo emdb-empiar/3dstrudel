@@ -25,7 +25,7 @@ __email__ = 'andrei@ebi.ac.uk'
 __date__ = '2018-05-29'
 
 
-import copy
+import shutil
 import os
 import numpy as np
 from datetime import datetime
@@ -63,6 +63,7 @@ class ChopModelMap:
             self.parallelism = "shared"
         self.start_time = None
         self.min_rscc = None
+        self.min_charged_rscc = None
         self.no_charged_check = None
         self.chop_log = None
         self.allowed_b = 0.0
@@ -311,6 +312,7 @@ class ChopModelMap:
         :param chop_map: map dir
         :return: False or True
         """
+        print("RSCCC ", self.check_rscc)
         good_b = True
         good_rscc = True
         complete = True
@@ -356,6 +358,7 @@ class ChopModelMap:
                 # Check map residue real space correlation coefficients
                 if self.check_rscc:
                     rscc = self.find_residue_rscc(self.rscc_list, chain_id, res_name, res_nr)
+                    print(chain_id, res_name, res_nr, f'RSCC: {rscc}')
                     if rscc < self.min_rscc:
                         self.chop_log.info('Residue %s %s %s has RSCC lover than %s',
                                            res_name, res_nr, chain_id, self.min_rscc)
@@ -522,7 +525,7 @@ class ChopModelMap:
         return [res_order_dict, hq, lq]
 
     def chop_model_map_parallel(self, residue_list, chop_map=True, chopping_mode='soft',
-                                nr_cores=2):
+                                nr_cores=2, save_tmp_files=False):
         """
         Similar to chop_model_map but runs in parallel
         Chop the specified residues and their side chains out of the input residue. Each residue and
@@ -625,25 +628,28 @@ class ChopModelMap:
                                                  self.map_object,
                                                  stat_storage,
                                                  chop_map=chop_map,
-                                                 chopping_mode=chopping_mode)
+                                                 chopping_mode=chopping_mode,
+                                                 save_tmp_files=save_tmp_files)
             self.chop_log.info('Rank %s finished chopping of %s residues in %s',
                                self.rank, len(split_all_res_obj_list[self.rank]), func.report_elapsed(start))
             self.chop_log.info('%s', '{:*^80}'.format(''))
             stat_storage = self.comm.gather(stat_storage, root=0)
         else:
             # shared memory
-            if __name__ == '__main__':
-                thread_list = []
-                for residue_obj_list in split_all_res_obj_list:
-                    t = Process(target=self.chop_worker_task,
-                                args=(residue_obj_list, self.map_object, stat_storage, chop_map, chopping_mode))
-                    thread_list.append(t)
-                for thread in thread_list:
-                    thread.start()
-                for thread in thread_list:
-                    thread.join()
-                self.chop_log.info('Finished chopping\nElapsed: %s', func.report_elapsed(start))
-                self.chop_log.info('%s', '\n{:*^80}\n'.format(''))
+            print(__name__)
+            # if __name__ == '__main__':
+            thread_list = []
+            for residue_obj_list in split_all_res_obj_list:
+                t = Process(target=self.chop_worker_task,
+                            args=(residue_obj_list, self.map_object, stat_storage,
+                                  chop_map, chopping_mode, save_tmp_files))
+                thread_list.append(t)
+            for thread in thread_list:
+                thread.start()
+            for thread in thread_list:
+                thread.join()
+            self.chop_log.info('Finished chopping\nElapsed: %s', func.report_elapsed(start))
+            self.chop_log.info('%s', '\n{:*^80}\n'.format(''))
 
         # Build a dictionary to store chopping statistics ( {res_name: [hq_nr, lq_nr]} )
         if self.rank == 0:
@@ -763,7 +769,7 @@ def main():
                         help="Map resolution required if RSCC were not provided")
     parser.add_argument("-rl", "--residue_list", dest="res_list", required=False, nargs='*',
                         help="Residue names to be chopped Ex: ASP ARG ..")
-    parser.add_argument("-np", "--n_processors", dest="np", required=False,
+    parser.add_argument("-np", "--n_processors", dest="np", required=False, type=int,
                         help="Number of processors in chopping mode")
     parser.add_argument("-mpi", "--mpi", dest="mpi", action='store_true',
                         help="Use distributed memory parallelism")
@@ -771,7 +777,7 @@ def main():
                         help="Do not chop identical chains")
 
     default_parameters = {"cube_radius": 4, "final_voxel": 0.25, "chop_radius": 2.0, "chop_soft_radius": 1.0,
-                          "chop_map": True, "chopping_mode": "soft", "check_rscc": True}
+                          "chop_map": True, "chopping_mode": "soft", "check_rscc": True, "no_charged_check": False}
     args = parser.parse_args()
     if args.mpi:
         sys.excepthook = func.global_except_hook
@@ -785,10 +791,14 @@ def main():
     #config = Configure()
     chop = ChopModelMap(rank, parallelism='mpi')
     chop_dir = args.chop_dir
+    if not os.path.exists(chop_dir):
+        os.makedirs(chop_dir)
 
+    print('just a test')
     if args.rscc_file:
         with open(args.rscc_file, 'r') as j:
             rscc_list = json.load(j)
+        shutil.copy(args.rscc_file, chop_dir)
     else:
         rscc_list = None
 
@@ -817,9 +827,9 @@ def main():
         res_list = nomenclature.AA_RESIDUES_LIST
 
     if args.np:
-        np = args.np
+        size = args.np
     else:
-        np = 2
+        size = 2
     if args.res:
         args.res = float(args.res)
 
@@ -827,7 +837,9 @@ def main():
     map_name = os.path.basename(args.in_map).split('.')[0]
     name = str(model_name) + '-' + str(map_name)
     log_path = os.path.join(chop_dir, 'chop_' + name + '.log')
-
+    # print('From main', __name__)
+    __name__ = '__main__'
+    print('From main', __name__)
     chop.set_env(args.chop_dir, name, args.in_model, args.in_map, log_path,
                  rscc_list=rscc_list,
                  allowed_b=None,
@@ -838,11 +850,13 @@ def main():
                                  chop_radius=parameters["chop_radius"],
                                  chop_soft_radius=parameters["chop_soft_radius"],
                                  check_rscc=parameters["check_rscc"],
+                                 no_charged_check=parameters["no_charged_check"]
                                  )
 
     statistics = chop.chop_model_map_parallel(res_list, chop_map=parameters["chop_map"],
                                               chopping_mode='soft',
-                                              nr_cores=size)
+                                              nr_cores=size,
+                                              save_tmp_files=True)
 
 if __name__ == '__main__':
     main()

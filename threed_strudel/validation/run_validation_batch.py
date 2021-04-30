@@ -29,6 +29,7 @@ from shutil import copy
 from distutils.spawn import find_executable
 from threed_strudel import configure as config
 from threed_strudel.utils import functions as func
+import threed_strudel.utils.cluster_utils as cu
 
 
 
@@ -52,6 +53,8 @@ def main():
     parser.add_argument("-l", "--lib", dest="lib", required=True, help="Strudel motif libraries path")
     parser.add_argument("-M", "--memory", dest="mem", required=True, help="Maximum memory")
     parser.add_argument("-np", "--num_proc", dest="np", required=True, help="Number of processors")
+    parser.add_argument("-v", "--voxel", dest="voxel", required=False, default=0.25, type=float,
+                        help="Segments voxel size")
     # parser.add_argument("-process_log", "--process_log", dest="process_log", default=None, required=False, help="Log file")
     # parser.add_argument("-v", "--voxel", dest="voxel", required=False, default=0.25, type=float, help="Segments voxel size")
     # parser.add_argument("-r", "--recompute", dest="recompute_scores", action='store_true',
@@ -92,11 +95,17 @@ def main():
                     out_path = os.path.join(args.out, entry[4])
                     if not os.path.exists(out_path):
                         os.makedirs(out_path)
-                    command = f'bsub -o o_{lib[0]} -e e_{lib[0]} -M {args.mem} -n {args.np} strudel_mapMotifValidation.py ' \
-                              f'-p {entry[2]} -m {entry[1]} -l {lib_path} -o out -log vs_{lib[0]}.log -np {args.np}'
-                    print(f'running {command}')
+                    # command = f'strudel_mapMotifValidation.py ' \
+                    #           f'-p {entry[2]} -m {entry[1]} -l {lib_path} -o out -log log_{lib[0]}.log -np {args.np}' \
+                    #           f'-v {args.voxel}'
+                    #
+                    # cu.memory_supervised_lsf_run(command, lib[0], out_path, start_mem=args.mem, np=args.np)
 
-                    # subprocess.call(command, cwd=out_path, shell=True)
+                    command = f'bsub -o o_{lib[0]} -e e_{lib[0]} -M {args.mem} -n {args.np} strudel_mapMotifValidation.py ' \
+                              f'-p {entry[2]} -m {entry[1]} -l {lib_path} -o out -log log_{lib[0]}.log -np {args.np}'
+                    # print(f'running {command}')
+
+                    subprocess.call(command, cwd=out_path, shell=True)
 
 
 if __name__ == '__main__':

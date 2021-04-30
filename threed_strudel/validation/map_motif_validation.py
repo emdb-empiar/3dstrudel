@@ -30,6 +30,7 @@ import numpy as np
 import psutil
 import operator
 import shutil
+import gzip
 import logging
 from datetime import datetime
 import time
@@ -325,8 +326,6 @@ class ComputeScores:
         else:
             log.error('Motif library %s not found', lib)
             sys.exit()
-        self.in_map = os.path.abspath(in_map)
-        self.in_model = os.path.abspath(in_model)
 
         self.segments = os.path.join(self.work_dir, 'segments')
         self.input = os.path.join(self.work_dir, 'input')
@@ -337,8 +336,20 @@ class ComputeScores:
             except FileExistsError:
                 pass
 
-        shutil.copy(self.in_map, self.input)
-        shutil.copy(self.in_model, self.input)
+        in_map = os.path.abspath(in_map)
+        in_model = os.path.abspath(in_model)
+
+        shutil.copy(in_map, self.input)
+        shutil.copy(in_model, self.input)
+        self.in_map = os.path.join(self.input, os.path.basename(in_map))
+        self.in_model = os.path.join(self.input, os.path.basename(in_model))
+        base, ext = os.path.splitext(self.in_map)
+        if ext == '.gz':
+            with gzip.open(self.in_map, 'rb') as f_in:
+                with open(base, 'wb') as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+            os.remove(self.in_map)
+            self.in_map = base
 
     @staticmethod
     def check_motif_lib(motif_lib_dir):
@@ -595,7 +606,7 @@ def main():
     parser.add_argument("-l", "--lib", dest="lib", required=True, help="Strudel motif library path")
     parser.add_argument("-np", "--n_processors", dest="np", required=False, default=2, help="Number of processors")
     parser.add_argument("-o", "--out", dest="out", required=True, help="Output directory")
-    parser.add_argument("-log", "--log", dest="log", default=None, required=False, help="Log file")
+    parser.add_argument("-log", "--log", dest="log", default=None, required=False, help="Log file path")
     parser.add_argument("-v", "--voxel", dest="voxel", required=False, default=0.25, type=float, help="Segments voxel size")
     parser.add_argument("-r", "--recompute", dest="recompute_scores", action='store_true',
                         help="Recalculate correlations")
@@ -614,6 +625,11 @@ def main():
 
     if not os.path.exists(args.out):
         os.makedirs(args.out)
+
+    if args.log is not None:
+        dirname = os.path.dirname(args.log)
+        if dirname is not '' and not os.path.exists(dirname):
+            os.makedirs(dirname)
 
     logging.basicConfig(filename=args.log, level=logging.INFO, format='%(levelname)s:  %(message)s')
     date_time = datetime.now().strftime("%H:%M:%S %Y-%m-%d")

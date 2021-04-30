@@ -2,6 +2,7 @@ from chimerax.core.commands import Command
 from shutil import copy2
 import json
 import os
+import sys
 
 rc = Command(session)
 
@@ -87,7 +88,10 @@ for pair in class_dict['class_pairs'][:]:
     rc.run('view position #3 sameAsModels #4')
     if fit_map:
         rc.run('volume #3 sdLevel 4')
-        rc.run('fitmap #3 inMap #1 metric correlation')
+        try:
+            rc.run('fitmap #3 inMap #1 metric correlation')
+        except Exception as err:
+            sys.stderr.write('Chimerax user error!! %s in map %s', err, mrc_file)
     else:
         out_model = os.path.join(out_dir, pair[1])
         rc.run('save {} format mmcif models #4'.format(out_model))

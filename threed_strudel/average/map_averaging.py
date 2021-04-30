@@ -79,6 +79,8 @@ class MapAveraging:
         self.min_reliable_number = min_reliable_nr
         self.unreliable_motif_folder = 'unreliable'
         self.unreliable_motif_dir = os.path.join(self.motifs_dir, 'unreliable')
+        self.final_map = ''
+        self.final_model = ''
         if not os.path.exists(self.unreliable_motif_dir):
             os.makedirs(self.unreliable_motif_dir)
         self.run_main()
@@ -110,7 +112,10 @@ class MapAveraging:
                 if len(class_dict['class_pairs']) > 0:
                     t = time.time()
                     self.log.info('Superimposing maps using residue as a guide...')
-                    self.superimpose(class_dict, fit_map=False)
+                    chimera_out = self.superimpose(class_dict, fit_map=False)
+                    if chimera_out != 0:
+                        self.log.error('ChimeraX returned code %s. Check %s for details.',
+                                       chimera_out, os.path.join(class_dict['out_dir'], 'chimera.out'))
                     self.log.debug('spent on superimposing %s', func.report_elapsed(t))
                     t = time.time()
                     self.log.info("Averaging the residue superimposed maps")
@@ -130,7 +135,10 @@ class MapAveraging:
                         class_dict['reference_mrc'] = aver_map
                         t = time.time()
                         self.log.info('Superimposing maps using residue as a guide followed by map to map fit...')
-                        self.superimpose(class_dict, fit_map=True)
+                        chimera_out = self.superimpose(class_dict, fit_map=True)
+                        if chimera_out != 0:
+                            self.log.error('ChimeraX returned code %s. Check %s for details.',
+                                           chimera_out, os.path.join(class_dict['out_dir'], 'chimera.out'))
                         self.log.debug('spent on superimposing %s', func.report_elapsed(t))
                         t = time.time()
                         self.log.info("Averaging the map to map superimposed maps")
@@ -146,11 +154,22 @@ class MapAveraging:
                             dst = self.motifs_dir
                         else:
                             dst = self.unreliable_motif_dir
-                        copy2(aligned_reference, os.path.join(dst, model_motif_name))
-                        copy2(aver_map, os.path.join(dst, map_motif_name))
+
+                        if os.path.exists(aligned_reference) and os.path.exists(aver_map):
+                            final_model_path = os.path.join(dst, model_motif_name)
+                            final_map_path = os.path.join(dst, map_motif_name)
+                            copy2(aligned_reference, final_model_path)
+                            copy2(aver_map, final_map_path)
+                            self.flag_derived_motif(self.rotamers[index].split('_')[-1], True)
+                        else:
+                            self.flag_derived_motif(self.rotamers[index].split('_')[-1], False)
 
         text = func.report_elapsed(start)
         self.log.info('\nElapsed: {}\n{:_^100}'.format(text, ''))
+
+    def flag_derived_motif(self, rotamer_name, flag):
+        pass
+
 
     @staticmethod
     def create_dir(path):
@@ -211,8 +230,8 @@ class MapAveraging:
         rotamer_dir = os.path.join(self.rotamer_classes_dir, rot_name)
         files = os.listdir(rotamer_dir)
 
-        rotamer_names = [i for i in files if i.endswith('.cif') and not i.startswith('class')]
-        for model in rotamer_names:
+        rotamer_model_files = [i for i in files if i.endswith('.cif') and not i.startswith('class')]
+        for model in rotamer_model_files:
             if model.endswith('representative.cif'):
                 tmp = model.split('_representative')[0] + '.cif'
                 class_dict['reference_model'] = os.path.join(self.models_dir, tmp)
@@ -229,11 +248,12 @@ class MapAveraging:
         nr = len(class_dict['class_pairs'])
         self.log.info("\nProcessing %s\n%s models were found for the %s rotamer", rot_name, nr, rot_name)
         self.log.info("The output files will be saved in the %s folder", class_name)
-        if len(rotamer_names) > 0:
-            residue_type = rotamer_names[0].split('-')[0]
+        if len(rotamer_model_files) > 0:
+            residue_type = rotamer_model_files[0].split('-')[0]
             motif_stats = {'residue': residue_type,
                            'rotamer': rot_name.split('_')[-1],
-                           'fragments_per_entry': dict(self.count_entries(rotamer_names))
+                           'fragments_per_entry': dict(self.count_entries(rotamer_model_files)),
+                           'derived': False
                            }
             self.statistics.append(motif_stats)
 
@@ -292,7 +312,7 @@ class MapAveraging:
         copy2(self.superimpose_chimera_script, out_dir)
         py_path = os.path.join(out_dir, os.path.basename(self.superimpose_chimera_script))
         command = self.chimera_path + ' --nogui ' + py_path + ' > chimera.out'
-        subprocess.call(command, cwd=out_dir, shell=True)
+        return subprocess.call(command, cwd=out_dir, shell=True)
 
     @staticmethod
     def normalize_truncate_neg(xyz, new_max_i):
