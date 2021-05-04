@@ -168,8 +168,14 @@ class MapAveraging:
         self.log.info('\nElapsed: {}\n{:_^100}'.format(text, ''))
 
     def flag_derived_motif(self, rotamer_name, flag):
-        pass
-
+        """
+        Flags motif deriving status
+        :param rotamer_name: rotamer name
+        :param flag: boolean
+        """
+        for item in self.statistics:
+            if item['rotamer'] == rotamer_name:
+                item['derived'] = flag
 
     @staticmethod
     def create_dir(path):
