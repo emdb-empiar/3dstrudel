@@ -91,7 +91,7 @@ for pair in class_dict['class_pairs'][:]:
         try:
             rc.run('fitmap #3 inMap #1 metric correlation')
         except Exception as err:
-            sys.stderr.write('Chimerax user error!! %s in map %s', err, mrc_file)
+            sys.stderr.write(f'Chimerax user error!! {err} in map {mrc_file}')
     else:
         out_model = os.path.join(out_dir, pair[1])
         rc.run('save {} format mmcif models #4'.format(out_model))

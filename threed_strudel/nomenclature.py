@@ -41,7 +41,7 @@ AA_3LET_TO_1LET = {'ALA': 'A',
 
 AA_RESIDUES_LIST = ["ALA", "PHE", "TRP", "ARG", "TYR", "ASP", "ASN", "VAL", "GLU", "GLN",
                     "HIS", "LYS", "THR", "SER", "LEU", "ILE", "GLY", "CYS", "MET", "PRO"]
-CHARGED_RESIDUES = ['ARG', 'ASP', 'GLU', 'LYS']
+CHARGED_RESIDUES = ['ASP', 'GLU']
 
 HEAVY_ATOMS = {'ARG': 11, 'LYS': 9, 'MET': 8, 'GLU': 9, 'GLN': 9, 'ASP': 8, 'ASN': 8,
                'ILE': 8, 'LEU': 8, 'HIS': 10, 'TRP': 14, 'TYR': 12, 'PHE': 11, 'PRO': 7,

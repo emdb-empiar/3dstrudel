@@ -30,6 +30,7 @@ import os
 import numpy as np
 from datetime import datetime
 import time
+import copy
 import json
 from multiprocessing import Process, Array
 try:
@@ -172,17 +173,17 @@ class ChopModelMap:
             self.chop_log.info("Spent on set_paths %s", func.report_elapsed(s_env_t))
 
     def set_map_chop_parameters(self, cube_radius=5.0, final_voxel=0.5, chop_radius=3.0, chop_soft_radius=2.0,
-                                check_rscc=True, min_rscc=0.7, check_b_values=True, no_charged_check=True):
+                                check_rscc=True, min_rscc=0.7, check_b_values=True, min_charged_rscc=0.5):
         """
         Set custom parameters for map chopping
-        :param check_b_values:
-        :param check_rscc:
-        :param check_inclusion:
+        :param min_rscc: Minimum acceptable RSCC
+        :param check_b_values: Check B-values
+        :param check_rscc: Check RSCC
         :param cube_radius: The distance between the cube edge the residue
         :param final_voxel: Final voxel size of the chopped maps
         :param chop_radius: Radius around the molecule for map chopping
         :param chop_soft_radius: Soft hard_radius around the molecule for map chopping
-        :param resolution:
+        :param min_charged_rscc: Minimum acceptable RSCC for charged residues
         """
         self.cube_radius = cube_radius
         self.final_voxel = final_voxel
@@ -191,7 +192,7 @@ class ChopModelMap:
         self.check_rscc = check_rscc
         self.min_rscc = min_rscc
         self.check_b_values = check_b_values
-        self.no_charged_check = no_charged_check
+        self.min_charged_rscc = min_charged_rscc
 
         # Set RSCC data
         if check_rscc and self.rscc_list is None:
@@ -312,7 +313,6 @@ class ChopModelMap:
         :param chop_map: map dir
         :return: False or True
         """
-        print("RSCCC ", self.check_rscc)
         good_b = True
         good_rscc = True
         complete = True
@@ -349,7 +349,7 @@ class ChopModelMap:
 
         # Check local map quality based on B-factors and atom inclusion
         if chop_map:
-            if res_name.upper() not in self.charged_res or not self.no_charged_check:
+            if res_name.upper() not in self.charged_res:
                 # Check B-factors
                 if self.check_b_values:
                     good_b = self.check_b_factors(residue)
@@ -358,11 +358,20 @@ class ChopModelMap:
                 # Check map residue real space correlation coefficients
                 if self.check_rscc:
                     rscc = self.find_residue_rscc(self.rscc_list, chain_id, res_name, res_nr)
-                    print(chain_id, res_name, res_nr, f'RSCC: {rscc}')
-                    if rscc < self.min_rscc:
-                        self.chop_log.info('Residue %s %s %s has RSCC lover than %s',
-                                           res_name, res_nr, chain_id, self.min_rscc)
+                    if rscc is None:
                         good_rscc = False
+                        self.chop_log.error('Could not find the RSCC for residue %s %s %s', res_name, res_nr, chain_id)
+                    else:
+                        if res_name.upper() not in self.charged_res:
+                            if rscc < self.min_rscc:
+                                self.chop_log.info('Residue %s %s %s has RSCC lover than %s',
+                                                   res_name, res_nr, chain_id, self.min_rscc)
+                                good_rscc = False
+                        else:
+                            if rscc < self.min_charged_rscc:
+                                self.chop_log.info('Residue %s %s %s has RSCC lover than %s (charged residue)',
+                                                   res_name, res_nr, chain_id, self.min_rscc)
+                                good_rscc = False
 
         if good_rscc and good_b and complete and single_conf:
             return True
@@ -636,7 +645,7 @@ class ChopModelMap:
             stat_storage = self.comm.gather(stat_storage, root=0)
         else:
             # shared memory
-            print(__name__)
+            # print(__name__)
             # if __name__ == '__main__':
             thread_list = []
             for residue_obj_list in split_all_res_obj_list:
@@ -777,7 +786,9 @@ def main():
                         help="Do not chop identical chains")
 
     default_parameters = {"cube_radius": 4, "final_voxel": 0.25, "chop_radius": 2.0, "chop_soft_radius": 1.0,
-                          "chop_map": True, "chopping_mode": "soft", "check_rscc": True, "no_charged_check": False}
+                          "chop_map": True, "min_rscc": 0.7, "check_rscc": True, "min_charged_rscc": 0.5,
+                          "check_b_values": True}
+
     args = parser.parse_args()
     if args.mpi:
         sys.excepthook = func.global_except_hook
@@ -794,7 +805,6 @@ def main():
     if not os.path.exists(chop_dir):
         os.makedirs(chop_dir)
 
-    print('just a test')
     if args.rscc_file:
         with open(args.rscc_file, 'r') as j:
             rscc_list = json.load(j)
@@ -837,9 +847,7 @@ def main():
     map_name = os.path.basename(args.in_map).split('.')[0]
     name = str(model_name) + '-' + str(map_name)
     log_path = os.path.join(chop_dir, 'chop_' + name + '.log')
-    # print('From main', __name__)
-    __name__ = '__main__'
-    print('From main', __name__)
+
     chop.set_env(args.chop_dir, name, args.in_model, args.in_map, log_path,
                  rscc_list=rscc_list,
                  allowed_b=None,
@@ -850,7 +858,9 @@ def main():
                                  chop_radius=parameters["chop_radius"],
                                  chop_soft_radius=parameters["chop_soft_radius"],
                                  check_rscc=parameters["check_rscc"],
-                                 no_charged_check=parameters["no_charged_check"]
+                                 min_charged_rscc=parameters["min_charged_rscc"],
+                                 min_rscc=parameters["min_rscc"],
+                                 check_b_values=parameters["check_b_values"]
                                  )
 
     statistics = chop.chop_model_map_parallel(res_list, chop_map=parameters["chop_map"],
