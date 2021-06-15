@@ -64,7 +64,7 @@ def main():
     prefix = os.path.splitext(json_file_path)[0]
     if os.path.exists(prefix + '.csv'):
         csv_to_top_csv(prefix+'.csv', prefix+'_top.csv')
-        # csv_to_top_scores_only_csv(prefix + '.csv', prefix + '_top_for_web.csv')
+        # csv_to_top_csv_scores_only(prefix + '.csv', prefix + '_top_for_web.csv')
 
     logging.info('\nElapsed: {}\n{:_^100}'.format(func.report_elapsed(start), ''))
 

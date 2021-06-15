@@ -285,7 +285,10 @@ def slave(pairs_list, lib, score_list, lock, json_out_path, csv_out_path=None, c
                         }
         for item in res_scores:
             # motif_name: correlation_m_matrix
-            residue_data[item[0]] = f'{item[1]}_m_{item[2]}'
+            if item[1] is not None:
+                residue_data[item[0]] = f'{item[1]}_m_{item[2]}'
+            else:
+                residue_data[item[0]] = None
 
         lock.acquire()
         score_list.append(residue_data)

@@ -349,29 +349,28 @@ class ChopModelMap:
 
         # Check local map quality based on B-factors and atom inclusion
         if chop_map:
-            if res_name.upper() not in self.charged_res:
-                # Check B-factors
-                if self.check_b_values:
-                    good_b = self.check_b_factors(residue)
-                    if not good_b:
-                        self.chop_log.info('Residue %s %s %s has high B-factors', res_name, res_nr, chain_id)
-                # Check map residue real space correlation coefficients
-                if self.check_rscc:
-                    rscc = self.find_residue_rscc(self.rscc_list, chain_id, res_name, res_nr)
-                    if rscc is None:
-                        good_rscc = False
-                        self.chop_log.error('Could not find the RSCC for residue %s %s %s', res_name, res_nr, chain_id)
+            # Check B-factors
+            if self.check_b_values:
+                good_b = self.check_b_factors(residue)
+                if not good_b:
+                    self.chop_log.info('Residue %s %s %s has high B-factors', res_name, res_nr, chain_id)
+            # Check map residue real space correlation coefficients
+            if self.check_rscc:
+                rscc = self.find_residue_rscc(self.rscc_list, chain_id, res_name, res_nr)
+                if rscc is None:
+                    good_rscc = False
+                    self.chop_log.error('Could not find the RSCC for residue %s %s %s', res_name, res_nr, chain_id)
+                else:
+                    if res_name.upper() not in self.charged_res:
+                        if rscc < self.min_rscc:
+                            self.chop_log.info('Residue %s %s %s RSCC=%.5s is lover than %s',
+                                               res_name, res_nr, chain_id, rscc, self.min_rscc)
+                            good_rscc = False
                     else:
-                        if res_name.upper() not in self.charged_res:
-                            if rscc < self.min_rscc:
-                                self.chop_log.info('Residue %s %s %s has RSCC lover than %s',
-                                                   res_name, res_nr, chain_id, self.min_rscc)
-                                good_rscc = False
-                        else:
-                            if rscc < self.min_charged_rscc:
-                                self.chop_log.info('Residue %s %s %s has RSCC lover than %s (charged residue)',
-                                                   res_name, res_nr, chain_id, self.min_rscc)
-                                good_rscc = False
+                        if rscc < self.min_charged_rscc:
+                            self.chop_log.info('Residue %s %s %s RSCC=%.5s is lover than %s (charged residue)',
+                                               res_name, res_nr, chain_id, rscc, self.min_charged_rscc)
+                            good_rscc = False
 
         if good_rscc and good_b and complete and single_conf:
             return True
@@ -442,12 +441,7 @@ class ChopModelMap:
         res_order_dict = stat_storage[0]
         hq = stat_storage[1]
         lq = stat_storage[2]
-        tmp_dir = '/tmp/chop'
-        self.tmp_dir = tmp_dir
-        try:
-            os.makedirs(tmp_dir)
-        except FileExistsError:
-            pass
+
         map_obj_list, shifts_list = chop.chop_cube_list(residue_obj_list,
                                                         in_map,
                                                         self.cube_radius)
@@ -478,7 +472,7 @@ class ChopModelMap:
             name_prefix = '{}-{}-{}'.format(res_type, res_nr, chain_id)
             # Delete the main chain atoms
             side_chain = residue
-            tmp_res_path = os.path.join(tmp_dir, name_prefix + '.cif')
+            tmp_res_path = os.path.join(model_map_dir, name_prefix + '.cif')
             struct = bio_utils.residues2structure(residue)
             bio_utils.save_model(struct, tmp_res_path)
             residue = bio_utils.load_structure(tmp_res_path)
@@ -486,14 +480,12 @@ class ChopModelMap:
             side_chain = self.del_main_chain(side_chain)
 
             # Save the side chain
-            cube_map_path = os.path.join(tmp_dir, name_prefix + self.cube_end)
+            cube_map_path = os.path.join(model_map_dir, name_prefix + self.cube_end)
             if save_tmp_files:
                 c_map_obj.write_map(cube_map_path)
             # Resampled map path
-            cube_new_grid_path = os.path.join(tmp_dir, name_prefix + self.cube_res_end)
+            cube_new_grid_path = os.path.join(model_map_dir, name_prefix + self.cube_res_end)
             start = time.time()
-
-            # chop.grid_resample(cube_map_path, cube_new_grid_path, self.final_voxel)
 
             c_map_obj.grid_resample_emda(self.final_voxel)
             if save_tmp_files:
@@ -504,22 +496,13 @@ class ChopModelMap:
             bio_utils.shift_coord(matrix, side_chain)
             if chopping_mode.lower() == 'hard':
                 fin_map = os.path.join(model_map_dir, name_prefix + self.hard_map_end)
-                # chop.chop_hard_radius(side_chain, cube_new_grid_path, fin_map, self.chop_radius)
                 chop.chop_hard_radius(side_chain, c_map_obj, fin_map, self.chop_radius)
             elif chopping_mode.lower() == 'soft':
                 fin_map = os.path.join(model_map_dir, name_prefix + self.soft_map_end)
-                # chop.chop_soft_radius(side_chain, cube_new_grid_path, fin_map, self.chop_radius,
-                #                       self.chop_soft_radius)
                 chop.chop_soft_radius(side_chain, c_map_obj, fin_map, self.chop_radius,
                                       self.chop_soft_radius)
             else:
                 raise Exception('The chopping_mode parameter can be hard or soft')
-
-            # try:
-            #     os.remove(cube_map_path)
-            #     os.remove(cube_new_grid_path)
-            # except FileNotFoundError:
-            #     pass
 
             fin_res = os.path.join(model_map_dir, name_prefix + self.shift_residue_end)
             side_path = os.path.join(side_pdb_dir, name_prefix + self.side_chain_end)
@@ -866,7 +849,7 @@ def main():
     statistics = chop.chop_model_map_parallel(res_list, chop_map=parameters["chop_map"],
                                               chopping_mode='soft',
                                               nr_cores=size,
-                                              save_tmp_files=True)
+                                              save_tmp_files=False)
 
 if __name__ == '__main__':
     main()

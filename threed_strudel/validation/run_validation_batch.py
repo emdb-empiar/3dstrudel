@@ -55,6 +55,8 @@ def main():
     parser.add_argument("-np", "--num_proc", dest="np", required=True, help="Number of processors")
     parser.add_argument("-v", "--voxel", dest="voxel", required=False, default=0.25, type=float,
                         help="Segments voxel size")
+    parser.add_argument("-s", "--keep_segments", dest="segm", action='store_true',
+                        help="Keep residues segments after finishing")
     # parser.add_argument("-process_log", "--process_log", dest="process_log", default=None, required=False, help="Log file")
     # parser.add_argument("-v", "--voxel", dest="voxel", required=False, default=0.25, type=float, help="Segments voxel size")
     # parser.add_argument("-r", "--recompute", dest="recompute_scores", action='store_true',
@@ -66,6 +68,7 @@ def main():
     # parser.add_argument("-wl", "--warning_level", dest="warning_level", default='info',
     #                     help="Log file warning level [info[debug]")
 
+
     if not find_executable(config.CHIMERA_PATH):
         print('ChimeraX path not set!\nPlease run strudel_setChimeraX.py to set the ChimeraX path')
         sys.exit()
@@ -73,6 +76,11 @@ def main():
 
     print(' '.join(sys.argv))
     args = parser.parse_args()
+    segm = args.segm
+    if segm:
+        segm = '-s'
+    else:
+        segm = ''
     # if args.log:
     #     log_file = args.log
     # else:
@@ -102,7 +110,7 @@ def main():
                     # cu.memory_supervised_lsf_run(command, lib[0], out_path, start_mem=args.mem, np=args.np)
 
                     command = f'bsub -o o_{lib[0]} -e e_{lib[0]} -M {args.mem} -n {args.np} strudel_mapMotifValidation.py ' \
-                              f'-p {entry[2]} -m {entry[1]} -l {lib_path} -o out -log log_{lib[0]}.log -np {args.np}'
+                              f'-p {entry[2]} -m {entry[1]} -l {lib_path} -o out -log log_{lib[0]}.log -np {args.np} {segm}'
                     # print(f'running {command}')
 
                     subprocess.call(command, cwd=out_path, shell=True)

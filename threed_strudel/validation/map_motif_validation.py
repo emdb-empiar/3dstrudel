@@ -77,7 +77,6 @@ class DictKeys:
     COMPLETE_DATA = 'complete_data'
 
 
-
 def dict_list_to_csv(dict_list, csv_path):
     """
     Dumps a list of dictionaries with identical keys to a csv file
@@ -116,13 +115,14 @@ def json_to_full_csv(json_path, csv_path):
     dict_list_to_csv(out_data, csv_path)
 
 
-def csv_to_top_csv(csv_path, out_csv_path, outlier_diff=0.05):
+def csv_to_top_csv(csv_path, out_csv_path, outlier_diff=0.05, score_decimal=5):
     """
     Prepares the input file for Strudel Score tool.
     Keeps only the top scoring motif data for each residue type
     :param csv_path: input scv file path
     :param out_csv_path: output scv file path
     :param outlier_diff: difference for outliers, diff = (top_score-same_type_score) / top_score
+    :param score_decimal: scores decimal places
     """
     data_frame = []
     k = DictKeys()
@@ -146,16 +146,18 @@ def csv_to_top_csv(csv_path, out_csv_path, outlier_diff=0.05):
                     corr, _, matrix = value.partition('_m_')
                     if corr == 'None':
                         corr = None
+                    else:
+                        corr = round(float(corr), score_decimal)
                     if matrix == 'None':
                         matrix = None
                     if code not in tmp.keys():
                         if 'None' not in value:
-                            tmp[code] = [float(corr), key, matrix]
+                            tmp[code] = [corr, key, matrix]
                         else:
                             tmp[code] = [None, None, None]
                     elif tmp[code][0] is not None and 'None' not in value:
-                        if tmp[code][0] < float(corr):
-                            tmp[code][0] = float(corr)
+                        if tmp[code][0] < corr:
+                            tmp[code][0] = corr
                             tmp[code][1] = key
                             tmp[code][2] = matrix
 
@@ -204,12 +206,13 @@ def csv_to_top_csv(csv_path, out_csv_path, outlier_diff=0.05):
     dict_list_to_csv(data_frame, out_csv_path)
 
 
-def csv_to_top_scores_only_csv(csv_path, out_csv_path, outlier_diff=0.05):
+def csv_to_top_csv_scores_only(csv_path, out_csv_path, outlier_diff=0.05, score_decimal=3):
     """
     Keeps only minimum data for the web version of the Strudel Score.
     :param csv_path: input scv file path
     :param out_csv_path: output scv file path
     :param outlier_diff: difference for outliers, diff = (top_score-same_type_score) / top_score
+    :param score_decimal: scores decimal places
     """
     data_frame = []
     k = DictKeys()
@@ -224,23 +227,26 @@ def csv_to_top_scores_only_csv(csv_path, out_csv_path, outlier_diff=0.05):
             row_d = {}
             tmp = {}
             row_d[k.ID] = i
-            if any(['None' in v for v in row.values()]):
+            if any([v.startswith('None') for v in row.values()]):
                 row_d[k.COMPLETE_DATA] = 0
             else:
                 row_d[k.COMPLETE_DATA] = 1
             for key, value in row.items():
                 code = key[:3]
                 if code.upper() in codes:
-                    corr, _, matrix = value.partition('_m_')
+                    corr = value.partition('_m_')[0]
+                    if corr == 'None':
+                        corr = None
+                    else:
+                        corr = round(float(corr), score_decimal)
                     if code not in tmp.keys():
-                        if 'None' not in value:
-                            tmp[code] = [float(corr), key]
-                        else:
-                            tmp[code] = [None, None]
-
-                    elif tmp[code][0] is not None and 'None' not in value:
-                        if tmp[code][0] < float(corr):
-                            tmp[code][0] = float(corr)
+                        tmp[code] = [corr, key]
+                    elif corr is not None:
+                        if tmp[code][0] is None:
+                            tmp[code][0] = corr
+                            tmp[code][1] = key
+                        elif tmp[code][0] < corr:
+                            tmp[code][0] = corr
                             tmp[code][1] = key
 
                 elif key in k_values:
@@ -280,6 +286,7 @@ class ComputeScores:
     """
     Class for correlations calculation between each amino acid residue map and each map motif
     """
+
     def __init__(self):
         self.residues = nomenclature.AA_RESIDUES_LIST
         self.chimera_path = self.find_chimerax()
@@ -348,7 +355,10 @@ class ComputeScores:
             with gzip.open(self.in_map, 'rb') as f_in:
                 with open(base, 'wb') as f_out:
                     shutil.copyfileobj(f_in, f_out)
-            os.remove(self.in_map)
+            try:
+                os.remove(self.in_map)
+            except FileNotFoundError:
+                pass
             self.in_map = base
 
     @staticmethod
@@ -466,7 +476,6 @@ class ComputeScores:
             fin_map_path = os.path.join(work_dir, name_prefix + '_soft.mrc')
             residue_path = os.path.join(work_dir, name_prefix + '.cif')
 
-
             if not os.path.exists(fin_map_path) or not os.path.exists(residue_path) or replace:
                 # map_obj_list[i].write_map(cube_map_path)
                 cube_map_obj = map_obj_list[i]
@@ -533,7 +542,7 @@ class ComputeScores:
                 lines = f.readlines()
                 try:
                     ln = len(lines[0].split()[0])
-                    lines[0] = lines[0][ln+2:]
+                    lines[0] = lines[0][ln + 2:]
                 except IndexError:
                     pass
                 try:
@@ -594,10 +603,9 @@ class ComputeScores:
             elif len(not_scored) > 1:
                 log.warning(f'Residues {", ".join(not_scored)} were not scored.\n'
                             f'Please restart the program with the same input parameters.')
-        if complete:
-            log.info("Validation completed successfully")
+
         return complete
-                    
+
 
 def main():
     parser = argparse.ArgumentParser(description='Map Validation')
@@ -607,7 +615,8 @@ def main():
     parser.add_argument("-np", "--n_processors", dest="np", required=False, default=2, help="Number of processors")
     parser.add_argument("-o", "--out", dest="out", required=True, help="Output directory")
     parser.add_argument("-log", "--log", dest="log", default=None, required=False, help="Log file path")
-    parser.add_argument("-v", "--voxel", dest="voxel", required=False, default=0.25, type=float, help="Segments voxel size")
+    parser.add_argument("-v", "--voxel", dest="voxel", required=False, default=0.25, type=float,
+                        help="Segments voxel size")
     parser.add_argument("-r", "--recompute", dest="recompute_scores", action='store_true',
                         help="Recalculate correlations")
     parser.add_argument("-rs", "--recompute_segments", dest="recompute_segments", action='store_true',
@@ -620,7 +629,12 @@ def main():
                         help="Outliers threshold, (calculated as: (top_score-same_type_score) / top_score")
     parser.add_argument("-s", "--keep_segments", dest="segm", action='store_true',
                         help="Keep residues segments after finishing")
+    parser.add_argument("-dw", "--web_score_decimal", dest="w_dec", required=False, default=3, type=int,
+                        help="Decimal places for web csv file")
+    parser.add_argument("-ds", "--strudel_score_decimal", dest="s_dec", required=False, default=5, type=int,
+                        help="Decimal places for Strudel Score csv file")
 
+    complete = False
     args = parser.parse_args()
 
     if not os.path.exists(args.out):
@@ -633,8 +647,12 @@ def main():
 
     logging.basicConfig(filename=args.log, level=logging.INFO, format='%(levelname)s:  %(message)s')
     date_time = datetime.now().strftime("%H:%M:%S %Y-%m-%d")
-    logging.info('\n{:_^100}'.format('MapMotifValidation') + '\n\nRun command:\n' +
-                 ' '.join(sys.argv) + '\n\nStarted: {}\n'.format(date_time))
+    log.info('\n{:_^100}'.format('MapMotifValidation') + '\n\nRun command:\n' +
+             ' '.join(sys.argv) + '\n\nStarted: {}\n'.format(date_time))
+
+    if not config.check_chimerax_executable():
+        log.error(config.no_chimerax_error())
+        sys.exit()
 
     args.np = int(args.np)
     start = time.time()
@@ -648,19 +666,24 @@ def main():
 
     prefix = os.path.splitext(json_file_path)[0]
     if os.path.exists(prefix + '.csv'):
-        csv_to_top_csv(prefix+'.csv', prefix+'_top.csv', args.diff)
-        compute.check_scores_completeness(compute.chopped_res_names, prefix + '_top.csv', compute.score_log)
-        csv_to_top_scores_only_csv(prefix + '.csv', prefix + '_top_for_web.csv')
+        csv_to_top_csv(prefix + '.csv', prefix + '_top.csv', args.diff, score_decimal=args.s_dec)
+        complete = compute.check_scores_completeness(compute.chopped_res_names, prefix + '_top.csv', compute.score_log)
+        csv_to_top_csv_scores_only(prefix + '.csv', prefix + '_top_for_web.csv', score_decimal=args.w_dec)
 
     if not args.segm:
-        logging.info('Cleaning temporary files...')
+        log.info('Cleaning temporary files...')
         shutil.rmtree(compute.segments)
         out_files = os.listdir(compute.out_dir)
         tmp_files = [f for f in out_files if f.endswith('_bak')]
         for tmp in tmp_files:
             os.remove(os.path.join(compute.out_dir, tmp))
 
-    logging.info('Elapsed: {}\n{:_^100}'.format(func.report_elapsed(start), ''))
+    if complete:
+        log.info("Validation completed successfully")
+    else:
+        log.info("Validation failed")
+
+    log.info('Elapsed: {}\n{:_^100}'.format(func.report_elapsed(start), ''))
 
 
 if __name__ == '__main__':

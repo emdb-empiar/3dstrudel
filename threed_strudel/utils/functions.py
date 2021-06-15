@@ -25,6 +25,8 @@ import math
 import logging
 from datetime import datetime, timedelta
 import time
+from distutils.spawn import find_executable
+import threed_strudel.configure as config
 import json
 import mrcfile
 
