@@ -36,6 +36,7 @@ from datetime import datetime
 import time
 import argparse
 from multiprocessing import Process, Manager
+import multiprocessing
 from distutils.spawn import find_executable
 
 from threed_strudel.chop.chop_map import ChopMap
@@ -45,6 +46,7 @@ from threed_strudel.utils import bio_utils
 from threed_strudel import nomenclature
 
 log = logging.getLogger(__name__)
+multiprocessing.set_start_method('fork')
 
 
 class DictKeys:

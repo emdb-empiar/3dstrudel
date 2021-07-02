@@ -55,6 +55,7 @@ def load_structure(model_path):
                     int(i)
                 except ValueError:
                     parser._mmcif_dict["_atom_site.auth_seq_id"] = parser._mmcif_dict["_atom_site.label_seq_id"]
+                    break
         parser._build_structure(in_path.split('/')[-1].split('.')[0])
         return parser._structure_builder.get_structure()
 

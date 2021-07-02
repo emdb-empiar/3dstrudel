@@ -44,6 +44,8 @@ import logging
 
 rc = Command(session)
 SD_LEVEL = 3
+multiprocessing.set_start_method('fork')
+
 
 class DictKeys:
     """
