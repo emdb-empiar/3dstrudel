@@ -86,6 +86,40 @@ def load_structure_label_id(model_path):
     for field in ['_atom_site.auth_seq_id', '_atom_site.auth_comp_id', '_atom_site.auth_asym_id', '_atom_site.auth_atom_id']:
         parser._mmcif_dict[field] = copy.deepcopy(parser._mmcif_dict[field.replace('auth', 'label')])
 
+    non_int = []
+    while True:
+        for i, rec in enumerate(parser._mmcif_dict['_atom_site.auth_seq_id']):
+            try:
+                int(rec)
+            except ValueError:
+                non_int.append(i)
+                print(i)
+                print(rec)
+                for key, value in parser._mmcif_dict.items():
+                    if key.startswith('_atom_site.'):
+                        # print(key)
+                        # print(parser._mmcif_dict[key])
+                        del parser._mmcif_dict[key][i]
+                break
+        else:
+            break
+    parser._build_structure(model_path.split('/')[-1].split('.')[0])
+    structure = parser._structure_builder.get_structure()
+
+    return structure
+
+def load_structure_label_id_old(model_path):
+    """
+    Creates Biopython structure object from file
+    :param model_path: pdb, cif file in_dir
+    :return: Biopython structure object
+    """
+    # def copy_label_seq_id(in_path):
+    parser = MMCIFParser(QUIET=True)
+    parser._mmcif_dict = MMCIF2Dict(model_path)
+    for field in ['_atom_site.auth_seq_id', '_atom_site.auth_comp_id', '_atom_site.auth_asym_id', '_atom_site.auth_atom_id']:
+        parser._mmcif_dict[field] = copy.deepcopy(parser._mmcif_dict[field.replace('auth', 'label')])
+
     while True:
         for i, rec in enumerate(parser._mmcif_dict['_atom_site.auth_seq_id']):
             try:
@@ -101,7 +135,6 @@ def load_structure_label_id(model_path):
     structure = parser._structure_builder.get_structure()
 
     return structure
-
 
 def fast_load_model(model_path):
     """

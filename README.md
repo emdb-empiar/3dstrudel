@@ -1,7 +1,7 @@
 # threed_strudel
 threed_strudel is a set of tools for cryo-EM maps data mining and motif based map-model validation. 
 # Requirements
-biopython, mrcfile, mpi4py, psutil, scipy, ChimeraX
+biopython, mrcfile, mpi4py, psutil, scipy, ChimeraX, strudel map-motif library (for map-motif validation)
 # Instalation
     pip install threed-strudel
 
@@ -9,6 +9,19 @@ biopython, mrcfile, mpi4py, psutil, scipy, ChimeraX
     strudel_setChimeraX.py path_to_chimeraX_executable 
     
 # Usage
+
+#### Strudel score calculation
+EM map-model validation based on strudel motif libraries.
+Requires strudel map-motif libraries (http://ftp.ebi.ac.uk/pub/databases/emdb_vault/strudel_libs/).
+The results can be visualised using the Strudel Score plugin for ChimeraX (https://cxtoolshed.rbvi.ucsf.edu/apps/chimeraxstrudelscore).
+
+
+    strudel_mapMotifValidation.py -p atomic_model_path -m map_path -l strudel_library_path (e.g. strudel-libs_ver-2.0_voxel-0.5/motifs_2.5-2.8) -o strudel_output_path
+
+To visualize the validation in ChimeraX please install the Strudel score plugin (https://cxtoolshed.rbvi.ucsf.edu/apps/chimeraxstrudelscore) and run:
+
+    ChimeraX --cmd 'strudel open strudel_output_path'
+
 Chop an atomic model and the corresponding EM map into amino acid residues:
 
     strudel_chopModelMapMPI.py [options]
@@ -23,12 +36,7 @@ Superimpose and average amino acid residues maps using atom models as guide (req
 
      strudel_mapAveraging.py [options]
      
-Strudel score calculation. EM map-model validation based on strudel motif libraries.
-Requires strudel map-motif libraries (http://ftp.ebi.ac.uk/pub/databases/emdb_vault/strudel_libs/).
-The results can be visualised using the Strudel Score plugin for ChimeraX (https://cxtoolshed.rbvi.ucsf.edu/apps/chimeraxstrudelscore).
 
-
-    strudel_mapMotifValidation.py [options]
     
 # License
 

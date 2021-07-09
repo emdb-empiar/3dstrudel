@@ -1,5 +1,4 @@
 from chimerax.core.commands import Command
-from shutil import copy2
 import json
 import os
 import sys

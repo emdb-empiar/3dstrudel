@@ -400,8 +400,8 @@ class ComputeScores:
         """
         try:
             in_model = bio_utils.load_structure(self.in_model)[0]
-            log.info('Failed to load structure using "auth" cif records. Attempting to use "label" records')
         except:
+            log.info('Failed to load structure using "auth" cif records. Attempting to use "label" records')
             in_model = bio_utils.load_structure_label_id(self.in_model)[0]
 
         del_atom_list = []

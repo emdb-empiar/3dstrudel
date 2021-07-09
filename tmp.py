@@ -1,23 +1,63 @@
-from threed_strudel.chop.chop_map import ChopMap
-import time
-import os
-import gzip
-import shutil
+import threed_strudel.utils.bio_utils as bu
 
-model = '/Volumes/data/test_gz/7c8k.cif'
-map_ = '/Volumes/data/test_gz/emd_30306.map.gz'
-unz_map = '/Volumes/data/test_gz/emd_30306.map'
-
-t = time.time()
-with gzip.open(map_, 'rb') as f_in:
-    with open(unz_map, 'wb') as f_out:
-        shutil.copyfileobj(f_in, f_out)
-os.remove(map_)
+path = '/Volumes/data/strudel_validation/results/workdir_0.5px/cov_30342/out/input/7cec.cif'
 
 
+# struct = bu.load_structure(path)
+# residues = struct[0]["H"].get_list()
+# print(dir(struct[0]["H"]))
+# res = struct[0]["H"]
+# print(res.get_unpacked_list())
+# print(res.get_list())
+#
+# print(res[31])
+# print(res[31].is_disordered())
+# for r in res.get_list():
+#     print(r)
+#     print(r.is_disordered())
+#     for atom in r:
+#         print(atom.is_disordered())
+#         print(atom.altloc)
 
-out_map = '/Volumes/data/test_gz/test.map'
 
 
-ChopMap.chop_cube(model, unz_map, zero_origin=False, out_map_path=out_map)
-print(f"Time: {time.time()-t}")
+
+            # print(r)
+#     except:
+#         pass
+#     for atom in r.get_list():
+#         if atom.is_disordered():
+#             print(r, atom)
+
+
+# for res in residues:
+#     if res.is_disordered():
+#         print(res)
+# for i in range(0,36):
+#     res = struct[0]['H'][i]
+#     print(res)
+#     print(res.is_disordered())
+
+# print(struct[0]['H'][31])
+# print(struct[0]['H'][31].is_disordered())
+# res31 = struct[0]['H'][31]
+# print(res31.get_unpacked_list())
+# for atom in struct[0]['H'][31]:
+#
+#     print(atom)
+#     print(atom.is_disordered())
+#     print(atom.get_altloc())
+#     print(atom.altloc)
+
+# struct = bu.load_structure_label_id(path)
+# for i in range(0,36):
+#     print(struct[0]['H'][i])
+#
+# for atom in struct[0]['H'][31]:
+#     print(atom)
+
+path1 = '/Users/andrei/Downloads/1test.cif'
+struct1 = bu.load_structure_label_id(path1)[0]
+for chain in struct1:
+    for r in chain:
+        print(r)

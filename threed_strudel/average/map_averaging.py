@@ -22,6 +22,7 @@ __author__ = 'Andrei Istrate'
 __email__ = 'andrei@ebi.ac.uk'
 __date__ = '2018-05-29'
 
+import logging
 import sys
 import os
 import time
@@ -38,6 +39,8 @@ from threed_strudel.parse.map_parser import MapParser
 import threed_strudel.average
 
 
+
+
 class MapAveraging:
     """
     Class for map superimposing using atom models as a guide and map averaging
@@ -50,10 +53,10 @@ class MapAveraging:
                  box_size=14,
                  motifs_dir=None,
                  scaling='standardise',
-                 warning_level='info',
-                 log_path=None,
                  motif_suffix='',
-                 min_reliable_nr=10):
+                 min_reliable_nr=10,
+                 log_path=None,
+                 warning_level='info',):
 
         self.scaling = scaling
         self.motif_suffix = motif_suffix
@@ -66,7 +69,6 @@ class MapAveraging:
         self.rotamer_classes_dir = os.path.abspath(rotamer_classes_dir)
         self.models_dir = os.path.abspath(model_dir)
         self.motifs_dir = motifs_dir
-        self.warning_level = warning_level
         self.rot_prefix = rot_prefix
         self.map_class_prefix = map_class_prefix
         self.statistics = []
@@ -146,9 +148,9 @@ class MapAveraging:
                         self.log.debug('spent on averaging %s', func.report_elapsed(t))
 
                         # Copy the reference atomic models to the motifs directory
-                        prefix = name.split('-')[0] + '_rotamer_' + class_name.split('_')[-1] + self.motif_suffix
-                        map_motif_name = prefix + self.motif_suffix + '.mrc'
-                        model_motif_name = prefix + self.motif_suffix + '.cif'
+                        prefix = f'{name.split("-")[0]}_rotamer_{class_name.split("_")[-1]}{self.motif_suffix}'
+                        map_motif_name = f'{prefix}{self.motif_suffix}.mrc'
+                        model_motif_name = f'{prefix}{self.motif_suffix}.cif'
 
                         if len(class_dict['class_pairs']) >= self.min_reliable_number:
                             dst = self.motifs_dir
@@ -193,6 +195,9 @@ class MapAveraging:
         date_time = datetime.now().strftime("%H:%M:%S %Y-%m-%d")
         text = '{:_^100}'.format('MapAveraging') + '\n\nStarted: {}'.format(date_time)
         self.log.info('%s\n\n', text)
+        if not config.check_chimerax_executable():
+            self.log.error(config.no_chimerax_error())
+            sys.exit()
         self.log.info("Searching rotamers in %s directory", self.rotamer_classes_dir)
         rot_folder_lst = [item for item in os.listdir(self.rotamer_classes_dir) if item.startswith(self.rot_prefix)]
         rot_folder_lst.sort()
@@ -241,7 +246,7 @@ class MapAveraging:
             if model.endswith('representative.cif'):
                 tmp = model.split('_representative')[0] + '.cif'
                 class_dict['reference_model'] = os.path.join(self.models_dir, tmp)
-                class_dict['reference_mrc'] = os.path.join(self.models_dir, tmp.split('_')[0] + self.map_suffix)
+                class_dict['reference_mrc'] = os.path.join(self.models_dir, f"{tmp.split('_')[0]}{self.map_suffix}")
                 pair = (tmp.split('_')[0] + self.map_suffix, tmp)
                 class_dict['class_pairs'].append(pair)
 
@@ -445,22 +450,16 @@ def main():
                         help="Classes folders prefix")
     parser.add_argument("-b", "--box", dest="box", default=14, help="Output motifs map box size")
     parser.add_argument("-m", "--mot_dir", dest="mot", default=None, help="Output motifs directory")
-    parser.add_argument("-w", "--warning_level", dest="warning_level", default='info', help="Warning level")
     parser.add_argument("-s", "--scaling", dest="scaling", default='standardise',
                         help="Image scaling normalization: 'normalise-all' - full intensity range, "
                              "'normalise-positive' - negative values are sett to 0 "
                              "'standardise' - standardisation (x-mean)/std")
-    parser.add_argument("-l", "log", dest="log", default=None, help="Log file path")
+    parser.add_argument("-l", "--log", dest="log", default=None, help="Log file path")
     parser.add_argument("-nr", "--rel_nr", dest="rel_nr", default=10, help="Minimum number of maps for a reliable motif")
     args = parser.parse_args()
 
-    if not config.check_chimerax_executable():
-        print(config.no_chimerax_error())
-        sys.exit()
-
     MapAveraging(args.m_dir, args.r_dir, args.rot_prefix, args.class_prefix, args.box,
-                 args.mot, log_path=args.log, warning_level=args.warning_level,
-                 scaling=args.scaling, min_reliable_nr=args.rel_nr)
+                 args.mot, scaling=args.scaling, min_reliable_nr=args.rel_nr)
 
 
 if __name__ == '__main__':

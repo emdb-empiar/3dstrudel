@@ -3,7 +3,7 @@ import os
 
 # ChimeraX executable path
 # CHIMERA_PATH = '/nfs/msd/work2/andrei/soft/chimerax/18-12/redhat/opt/UCSF/ChimeraX-daily/bin/ChimeraX'
-CHIMERA_PATH = '/Applications/ChimeraX-1.1.1.app/Contents/MacOS/ChimeraX'
+CHIMERA_PATH = '' #'/Applications/ChimeraX-1.1.1.app/Contents/MacOS/ChimeraX'
 
 
 def check_chimerax_executable():
