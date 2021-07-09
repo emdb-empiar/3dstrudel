@@ -3,7 +3,7 @@ threed_strudel is a set of tools for cryo-EM maps data mining and motif based ma
 # Requirements
 biopython, mrcfile, mpi4py, psutil, scipy, ChimeraX, strudel map-motif library (for map-motif validation)
 # Instalation
-    pip install threed-strudel
+    pip install threed_strudel
 
 # Set ChimeraX path
     strudel_setChimeraX.py path_to_chimeraX_executable 
