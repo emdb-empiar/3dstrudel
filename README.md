@@ -12,7 +12,7 @@ biopython, mrcfile, mpi4py, psutil, scipy, ChimeraX, strudel map-motif library (
 
 #### Strudel score calculation
 EM map-model validation based on strudel motif libraries.
-Requires strudel map-motif libraries (http://ftp.ebi.ac.uk/pub/databases/emdb_vault/strudel_libs/).
+Requires strudel map-motif libraries (http://ftp.ebi.ac.uk/pub/databases/emdb_vault/strudel_libs/strudel-libs_ver-2.0_voxel-0.5.tar).
 The results can be visualised using the Strudel Score plugin for ChimeraX (https://cxtoolshed.rbvi.ucsf.edu/apps/chimeraxstrudelscore).
 
 

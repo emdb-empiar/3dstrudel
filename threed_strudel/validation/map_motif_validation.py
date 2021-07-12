@@ -38,7 +38,7 @@ import argparse
 from multiprocessing import Process, Manager
 import multiprocessing
 from distutils.spawn import find_executable
-
+from threed_strudel.parse.map_parser import MapParser
 from threed_strudel.chop.chop_map import ChopMap
 from threed_strudel.utils import functions as func
 import threed_strudel.configure as config
@@ -364,14 +364,14 @@ class ComputeScores:
             self.in_map = base
 
     @staticmethod
-    def check_motif_lib(motif_lib_dir):
+    def check_motif_lib(lib_path):
         """
         Checks the integrity of the motif library
-        :param motif_lib_dir: motif library directory
+        :param lib_path: motif library directory
         """
-        log.info(f'Checking @{os.path.basename(motif_lib_dir)} motif library')
+        log.info(f'Checking @{os.path.basename(os.path.dirname(lib_path))} motif library')
 
-        files = os.listdir(motif_lib_dir)
+        files = os.listdir(lib_path)
         if len(files) == 0:
             log.error('Empty motif library')
         pdb_names = [i.split('.')[0] for i in files if i.endswith('.cif') and not i.startswith('.')]
@@ -380,7 +380,7 @@ class ComputeScores:
         pdb_names.sort()
         map_names.sort()
         if len(pdb_names) != len(map_names):
-            log.warning('There are missing files in the map motif library: %s', motif_lib_dir)
+            log.warning('There are missing files in the map motif library: %s', lib_path)
         else:
             log.info(f'OK')
         for name in pdb_names:
@@ -389,6 +389,21 @@ class ComputeScores:
         for name in map_names:
             if name not in pdb_names:
                 log.warning('Missing model file for %s motif', name)
+
+    def get_lib_voxel_size(self):
+        """
+        Get strudel library voxel size
+        :param lib_path: strudel library path
+        :return: voxel size
+        """
+        files = os.listdir(self.lib)
+        maps = [i for i in files if (i.endswith('.mrc') or i.endswith('.map')) and not i.startswith('.')]
+        if len(maps) == 0:
+            return None
+        map_path = os.path.join(self.lib, maps[0])
+        lib_map = MapParser(map_path)
+        voxel_size = lib_map.voxel_size[0]
+        return voxel_size
 
     def chop_structure(self, n_cores=4, voxel=0.25, replace=True):
         """
@@ -483,7 +498,7 @@ class ComputeScores:
                 cube_map_obj = map_obj_list[i]
                 # cube_map_obj.write_map(cube_map_path)
 
-                cube_map_obj.grid_resample_emda(voxel)
+                cube_map_obj.grid_resample_emda(self.work_grid_sampling)
 
                 # cube_map_obj.write_map(res_cube_map_path)
 
@@ -494,6 +509,8 @@ class ComputeScores:
                 # fin_map = self.chop.chop_soft_radius(side_chain, res_cube_map_path, hard_radius=2, soft_radius=1,)
                 fin_map = self.chop.chop_soft_radius_watershed(side_chain, cube_map_obj, whole_model,
                                                                radius=2, soft_radius=1, )
+                fin_map.grid_resample_emda(voxel)
+
                 if np.isnan(np.sum(fin_map.data)):
                     fin_map.data[np.isnan(fin_map.data)] = 0
                     log.warning("NaN values in {}\n"
@@ -617,7 +634,7 @@ def main():
     parser.add_argument("-np", "--n_processors", dest="np", required=False, default=2, help="Number of processors")
     parser.add_argument("-o", "--out", dest="out", required=True, help="Output directory")
     parser.add_argument("-log", "--log", dest="log", default=None, required=False, help="Log file path")
-    parser.add_argument("-v", "--voxel", dest="voxel", required=False, default=0.25, type=float,
+    parser.add_argument("-v", "--voxel", dest="voxel", required=False, default=0, type=float,
                         help="Segments voxel size")
     parser.add_argument("-r", "--recompute", dest="recompute_scores", action='store_true',
                         help="Recalculate correlations")
@@ -661,7 +678,12 @@ def main():
 
     compute = ComputeScores()
     compute.set_paths(work_dir=args.out, lib=args.lib, in_map=args.in_map, in_model=args.in_model)
-    chopped_pairs = compute.chop_structure(n_cores=args.np, voxel=args.voxel, replace=args.recompute_segments)
+    if not args.voxel:
+        voxel = compute.get_lib_voxel_size()
+        log.info(f'No map segmentation voxel size was specified. Strudel library voxel size will be used - {voxel}')
+    else:
+        voxel = args.voxel
+    chopped_pairs = compute.chop_structure(n_cores=args.np, voxel=voxel, replace=args.recompute_segments)
 
     # correlations_log = f'score_{datetime.now().strftime("%Y-%m-%d")}.log'
     json_file_path = compute.compute_correlations(chopped_pairs, args.np, args.recompute_scores, verbose=args.v_c)
