@@ -17,6 +17,8 @@ specific language governing permissions and limitations
 under the License.
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 __author__ = 'Andrei Istrate'
 __email__ = 'andrei@ebi.ac.uk'
 __date__ = '2018-05-29'
@@ -94,12 +96,9 @@ class ComputeScores:
         self.keys = DictKeys()
 
     def find_chimerax(self):
-        path = config.CHIMERA_PATH
-        out = find_executable(path)
-        if out is None:
-            raise Exception(f'Could not find ChimeraX\n please edit {os.path.abspath(config.__file__)}')
-        else:
-            return path
+        if not config.check_chimerax_executable():
+            config.no_chimerax_error()
+            sys.exit()
 
     def set_dir_tree(self, work_dir):
         self.work_dir = os.path.abspath(work_dir)
@@ -110,7 +109,7 @@ class ComputeScores:
         for path in [self.segments, self.input, self.out_dir, self.sequence_dir]:
             try:
                 os.makedirs(path)
-            except FileExistsError:
+            except IOError:
                 pass
             except TypeError:
                 pass
@@ -137,7 +136,7 @@ class ComputeScores:
         self.in_model = os.path.abspath(in_model)
         try:
             os.makedirs(self.out_dir)
-        except FileExistsError:
+        except IOError:
             pass
 
         shutil.copy(self.in_map, self.input)
@@ -188,7 +187,7 @@ class ComputeScores:
         Checks the integrity of the motif library
         :param motif_lib_dir: motif library directory
         """
-        log.info(f'Checking @{os.path.basename(motif_lib_dir)} motif library')
+        log.info('Checking @{} motif library'.format(os.path.basename(motif_lib_dir)))
 
         files = os.listdir(motif_lib_dir)
         if len(files) == 0:
@@ -201,7 +200,7 @@ class ComputeScores:
         if len(pdb_names) != len(map_names):
             log.warning('There are missing files in the map motif library: %s', motif_lib_dir)
         else:
-            log.info(f'OK')
+            log.info('OK')
         for name in pdb_names:
             if name not in map_names:
                 log.warning('Missing map file for %s motif', name)
@@ -336,12 +335,15 @@ class ComputeScores:
         json_out = os.path.abspath(json_out)
 
         if sd_level:
-            sd = f'-sd {sd_level}'
+            sd = '-sd {}'.format(sd_level)
         else:
             sd = ''
 
-        command = f'{self.chimera_path} --nogui {v_flag} {updated_script}' \
-                  f' -s {pairs_json} -m {self.in_model} -l {self.lib} -np {n_cores} {sd} -o {json_out} {recompute} > chimera.process_log'
+        # command = f'{self.chimera_path} --nogui {v_flag} {updated_script}' \
+        #           f' -s {pairs_json} -m {self.in_model} -l {self.lib} -np {n_cores} {sd} -o {json_out} {recompute} > chimera.process_log'
+
+        command = '{} --nogui {} {} -s {} -m {} -l {} -np {} {} -o {} {} > chimera.process_log'.format(
+            self.chimera_path, v_flag, updated_script, pairs_json, self.in_model, self.lib, n_cores, sd, json_out, recompute)
 
         subprocess.call(command, cwd=self.out_dir, shell=True)
         return json_out
@@ -360,7 +362,7 @@ class ComputeScores:
             if not key.startswith('__'):
                 for i, line in enumerate(lines):
                     if line.startswith('    ' + key):
-                        lines[i] = f"    {key} = '{value}'\n"
+                        lines[i] = "    {} = '{}'\n".format(key, value)
         head, tail = os.path.split(script_path)
         updated_script_path = os.path.join(head, 'updated_' + tail)
         with open(updated_script_path, 'w') as of:
@@ -380,7 +382,7 @@ class ComputeScores:
             try:
                 corr = score_list[nr][self.keys.SCORES][code][1]
             except KeyError:
-                print(f'Code {code} not valid')
+                print('Code {} not valid'.format(code))
                 corr = 0
             # all_c = [i[1] for i in score_list[nr][self.keys.SCORES].values()]
             # quart = np.percentile(all_c, 80)
@@ -490,7 +492,7 @@ class ComputeScores:
 
         seq_scores.sort(key=lambda z: z[0], reverse=True)
         # print("Total Sequences: {}".format(len(seq_scores)))
-        print(f'Total sequences: {len(seq.values())}. Total fragments: {len(seq_scores)}')
+        print('Total sequences: {}. Total fragments: {}'.format(len(seq.values()), len(seq_scores)))
         z = []
         for i, pair in enumerate(seq_scores[:]):
 
@@ -531,7 +533,7 @@ class ComputeScores:
         # cut_off = self.get_cutt_off(fragment_scores_lst, 75)
         length = len(fragment_scores_lst)
         if verbose:
-            print(f'Correct sequence: {correct_seq}')
+            print('Correct sequence: {}'.format(correct_seq))
             print("Sequence length: {}".format(len(fragment_scores_lst)))
 
         # rev_score_lst = fragment_scores_lst[-1::-1]
@@ -552,7 +554,7 @@ class ComputeScores:
 
         seq_scores.sort(key=lambda z: z[0], reverse=True)
         if verbose:
-            print(f'Total sequences: {len(seq.values())}. Total fragments: {len(seq_scores)}')
+            print('Total sequences: {}. Total fragments: {}'.format(len(seq.values()), len(seq_scores)))
 
         place = -1
         cor_Z = 0
@@ -587,7 +589,7 @@ class ComputeScores:
         # cut_off = self.get_cutt_off(fragment_scores_lst, 75)
         length = len(fragment_scores_lst)
         if verbose:
-            print(f'Correct sequence: {correct_seq}')
+            print('Correct sequence: {}'.format(correct_seq))
             print("Sequence length: {}".format(len(fragment_scores_lst)))
 
         rev_score_lst = fragment_scores_lst[-1::-1]
@@ -608,7 +610,7 @@ class ComputeScores:
 
             seq_scores.sort(key=lambda z: z[0], reverse=True)
             if verbose:
-                print(f'Total sequences: {len(seq.values())}. Total fragments: {len(seq_scores)}')
+                print('Total sequences: {}. Total fragments: {}'.format(len(seq.values()), len(seq_scores)))
 
 
             for i, pair in enumerate(seq_scores[:]):
@@ -680,7 +682,7 @@ class ComputeScores:
                         if rec is not None:
                             fragm_scores.append(rec)
                         else:
-                            not_found = f'{c}-{r_nr}'
+                            not_found = '{}-{}'.format(c, r_nr)
                             break
                     seq = ''
                     for e in fragm_scores:
@@ -786,11 +788,11 @@ def main():
             # o_j_p = '/Volumes/data/find_seq_20584/out/vs_motifs_3.2-3.5/jsons_75'
             # o_j_p = '/Volumes/data/find_seq/untitled_folder/0711_out_sd1/jsons_75'
             compute.sequence_dict['scored'] = seq
-            o_j_p = os.path.join(args.out, f'jsons_{args.cut_off}')
+            o_j_p = os.path.join(args.out, 'jsons_{}'.format(args.cut_off))
             if not os.path.exists(o_j_p):
                 os.makedirs(o_j_p)
             for i in range(5, 40):
-                o_j = os.path.join(o_j_p, f'{i}.json')
+                o_j = os.path.join(o_j_p, '{}.json'.format(i))
                 res = compute.score_fragments(tmp, i, c_off, args.in_model, False)
                 func.save_json(o_j, res)
 

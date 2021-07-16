@@ -17,6 +17,8 @@ specific language governing permissions and limitations
 under the License.
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 __author__ = 'Andrei Istrate'
 __email__ = 'andrei@ebi.ac.uk'
 __date__ = '2018-05-29'
@@ -46,7 +48,8 @@ from threed_strudel.utils import bio_utils
 from threed_strudel import nomenclature
 
 log = logging.getLogger(__name__)
-multiprocessing.set_start_method('fork')
+if sys.version_info >= (3, 8):
+    multiprocessing.set_start_method('fork')
 
 
 class DictKeys:
@@ -128,8 +131,9 @@ def csv_to_top_csv(csv_path, out_csv_path, outlier_diff=0.05, score_decimal=5):
     """
     data_frame = []
     k = DictKeys()
+
     dd = DictKeys.__dict__
-    k_values = [dd[k] for k in dd.keys() if not k.startswith('__')]
+    k_values = [dd[key] for key in dd.keys() if not key.startswith('__')]
 
     with open(csv_path, mode='r') as csv_file:
         csv_reader = csv.DictReader(csv_file)
@@ -169,7 +173,7 @@ def csv_to_top_csv(csv_path, out_csv_path, outlier_diff=0.05, score_decimal=5):
                     except ValueError:
                         row_d[key] = value
                 else:
-                    raise Exception(f'Key {key} is unknown to the data structure cannot continue')
+                    raise Exception('Key {} is unknown to the data structure cannot continue'.format(key))
 
             max_correlation = -1
             row_d[k.M_TOP_TYPE] = None
@@ -219,7 +223,7 @@ def csv_to_top_csv_scores_only(csv_path, out_csv_path, outlier_diff=0.05, score_
     data_frame = []
     k = DictKeys()
     dd = DictKeys.__dict__
-    k_values = [dd[k] for k in dd.keys() if not k.startswith('__')]
+    k_values = [dd[key] for key in dd.keys() if not key.startswith('__')]
 
     with open(csv_path, mode='r') as csv_file:
         csv_reader = csv.DictReader(csv_file)
@@ -257,7 +261,7 @@ def csv_to_top_csv_scores_only(csv_path, out_csv_path, outlier_diff=0.05, score_
                     except ValueError:
                         row_d[key] = value
                 else:
-                    raise Exception(f'Key {key} is unknown to the data structure cannot continue')
+                    raise Exception('Key {} is unknown to the data structure cannot continue'.format(key))
 
             max_correlation = -1
             row_d[k.M_TOP_TYPE] = None
@@ -314,7 +318,7 @@ class ComputeScores:
         path = config.CHIMERA_PATH
         out = find_executable(path)
         if out is None:
-            raise Exception(f'Could not find ChimeraX\n please edit {os.path.abspath(config.__file__)}')
+            raise Exception('Could not find ChimeraX\n please edit {}'.format(os.path.abspath(config.__file__)))
         else:
             return path
 
@@ -340,10 +344,8 @@ class ComputeScores:
         self.input = os.path.join(self.work_dir, 'input')
 
         for path in [self.segments, self.input, self.out_dir]:
-            try:
+            if not os.path.exists(path):
                 os.makedirs(path)
-            except FileExistsError:
-                pass
 
         in_map = os.path.abspath(in_map)
         in_model = os.path.abspath(in_model)
@@ -359,7 +361,7 @@ class ComputeScores:
                     shutil.copyfileobj(f_in, f_out)
             try:
                 os.remove(self.in_map)
-            except FileNotFoundError:
+            except IOError:
                 pass
             self.in_map = base
 
@@ -369,7 +371,7 @@ class ComputeScores:
         Checks the integrity of the motif library
         :param lib_path: motif library directory
         """
-        log.info(f'Checking @{os.path.basename(os.path.dirname(lib_path))} motif library')
+        log.info('Checking @{} motif library'.format(os.path.basename(os.path.dirname(lib_path))))
 
         files = os.listdir(lib_path)
         if len(files) == 0:
@@ -382,7 +384,7 @@ class ComputeScores:
         if len(pdb_names) != len(map_names):
             log.warning('There are missing files in the map motif library: %s', lib_path)
         else:
-            log.info(f'OK')
+            log.info('OK')
         for name in pdb_names:
             if name not in map_names:
                 log.warning('Missing map file for %s motif', name)
@@ -551,9 +553,12 @@ class ComputeScores:
             shutil.copy(log_path, log_path + '_back')
             os.remove(log_path)
 
-        command = f'{self.chimera_path} --nogui {v_flag} {updated_script}' \
-                  f' -p {pairs_json} -sl {self.lib} -np {n_cores} -o {json_out} {recompute} ' \
-                  f'-l {self.score_log} > chimera.log'
+        # command = f'{self.chimera_path} --nogui {v_flag} {updated_script}' \
+        #           f' -p {pairs_json} -sl {self.lib} -np {n_cores} -o {json_out} {recompute} ' \
+        #           f'-l {self.score_log} > chimera.log'
+
+        command = '{} --nogui {} {} -p {} -sl {} -np {} -o {} {} -l {} > chimera.log'.format(
+            self.chimera_path, v_flag, updated_script, pairs_json, self.lib, n_cores, json_out, recompute, self.score_log)
 
         subprocess.call(command, cwd=self.out_dir, shell=True)
         try:
@@ -569,7 +574,7 @@ class ComputeScores:
                 except IndexError:
                     pass
                 log.info(''.join(lines))
-        except FileNotFoundError:
+        except IOError:
             pass
         return json_out
 
@@ -587,7 +592,7 @@ class ComputeScores:
             if not key.startswith('__'):
                 for i, line in enumerate(lines):
                     if line.startswith('    ' + key):
-                        lines[i] = f"    {key} = '{value}'\n"
+                        lines[i] = "    {} = '{}'\n".format(key, value)
         head, tail = os.path.split(script_path)
         updated_script_path = os.path.join(head, 'updated_' + tail)
         with open(updated_script_path, 'w') as of:
@@ -604,12 +609,12 @@ class ComputeScores:
             csv_reader = csv.DictReader(csv_file)
 
             for row in csv_reader:
-                name = f'{row[k.RES_TYPE]}-{row[k.RES_NR]}-{row[k.CHAIN]}'
+                name = '{}-{}-{}'.format(row[k.RES_TYPE], row[k.RES_NR], row[k.CHAIN])
                 scored.append(name)
                 if not int(row[k.COMPLETE_DATA]):
                     complete = False
-                    log.warning(f'The data for residue {name} is not complete.'
-                                f' Check {scoring_log} for details')
+                    log.warning('The data for residue {} is not complete.'
+                                ' Check {} for details'.format(name, scoring_log))
             not_scored = []
             for name in segmented_residues:
                 if name not in scored:
@@ -617,11 +622,11 @@ class ComputeScores:
                     complete = False
 
             if len(not_scored) == 1:
-                log.warning(f'Residue {not_scored[0]} was not scored. '
-                            f'Please restart the program with the same input parameters.')
+                log.warning('Residue {} was not scored. '
+                            'Please restart the program with the same input parameters.'.format(not_scored[0]))
             elif len(not_scored) > 1:
-                log.warning(f'Residues {", ".join(not_scored)} were not scored.\n'
-                            f'Please restart the program with the same input parameters.')
+                log.warning('Residues {} were not scored.\n'
+                            'Please restart the program with the same input parameters.'.format(", ".join(not_scored)))
 
         return complete
 
@@ -680,7 +685,7 @@ def main():
     compute.set_paths(work_dir=args.out, lib=args.lib, in_map=args.in_map, in_model=args.in_model)
     if not args.voxel:
         voxel = compute.get_lib_voxel_size()
-        log.info(f'No map segmentation voxel size was specified. Strudel library voxel size will be used - {voxel}')
+        log.info('No map segmentation voxel size was specified. Strudel library voxel size will be used - {}'.format(voxel))
     else:
         voxel = args.voxel
     chopped_pairs = compute.chop_structure(n_cores=args.np, voxel=voxel, replace=args.recompute_segments)

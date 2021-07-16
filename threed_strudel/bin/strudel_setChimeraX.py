@@ -25,9 +25,7 @@ if out is None:
                 break
 
 if out is None:
-    print(f'ERROR: \n'
-          f'{CHIMERA_PATH}'
-          f'\n is not an executable')
+    print('ERROR: \n{}\n is not an executable'.format(CHIMERA_PATH))
 
 else:
     with open(config_path, 'r') as f:
@@ -36,7 +34,7 @@ else:
             words = line.split()
             if len(words) > 1:
                 if words[0] == 'CHIMERA_PATH':
-                    words[-1] = f'"{CHIMERA_PATH}"'
+                    words[-1] = '"{}"'.format(CHIMERA_PATH)
                     lines[i] = ' '.join(words) + '\n'
     with open(config_path, 'w') as f:
         f.writelines(lines)

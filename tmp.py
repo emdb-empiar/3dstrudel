@@ -56,8 +56,12 @@ path = '/Volumes/data/strudel_validation/results/workdir_0.5px/cov_30342/out/inp
 # for atom in struct[0]['H'][31]:
 #     print(atom)
 
-path1 = '/Users/andrei/Downloads/1test.cif'
-struct1 = bu.load_structure_label_id(path1)[0]
-for chain in struct1:
-    for r in chain:
-        print(r)
+# path1 = '/Users/andrei/Downloads/1test.cif'
+# struct1 = bu.load_structure_label_id(path1)[0]
+# for chain in struct1:
+#     for r in chain:
+#         print(r)
+
+path = '/Volumes/data/strudel_validation/results/workdir_0.5px/T0102_err/out/input/T0102EM054_1_err.cif'
+
+struct = bu.load_structure(path)

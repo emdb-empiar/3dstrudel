@@ -18,6 +18,8 @@ specific language governing permissions and limitations
 under the License.
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 __author__ = 'Andrei Istrate'
 __email__ = 'andrei@ebi.ac.uk'
 __date__ = '2018-05-29'
@@ -246,7 +248,7 @@ class MapParser:
             self.cell = (self.cell[0] + self.voxel_size[0], self.cell[1] + self.voxel_size[1], self.cell[2] + self.voxel_size[2])
 
         scale = self.voxel_size[0] / target_voxel
-        old_grid = x.data.shape
+        old_grid = x.shape
         new_grid = [int(round(i * scale)) for i in old_grid]
 
         # Forward transform

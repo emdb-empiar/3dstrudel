@@ -23,6 +23,7 @@ __date__ = '2018-05-29'
 
 import os
 import argparse
+import logging
 
 
 def main():

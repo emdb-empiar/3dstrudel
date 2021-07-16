@@ -21,6 +21,8 @@ specific language governing permissions and limitations
 under the License.
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 __author__ = 'Andrei Istrate'
 __email__ = 'andrei@ebi.ac.uk'
 __date__ = '2018-05-29'
@@ -68,7 +70,7 @@ class ChopMap:
         elif os.path.exists(in_map):
             in_map = MapParser(in_map)
         else:
-            raise Exception(f'in_map should be MapParser object or a map file path not {type(in_map)}')
+            raise Exception('in_map should be MapParser object or a map file path not {}'.format(type(in_map)))
 
         shifts_list = []
         chopped_map_obj_list = []
@@ -97,7 +99,7 @@ class ChopMap:
         elif os.path.exists(in_map):
             in_map = MapParser(in_map)
         else:
-            raise Exception(f'in_map should be MapParser object or a map file path not {type(in_map)}')
+            raise Exception('in_map should be MapParser object or a map file path not {}'.format(type(in_map)))
 
         if isinstance(in_model, str):
             in_model = bu.load_structure(in_model)
@@ -266,12 +268,12 @@ class ChopMap:
         for atom in model.get_atoms():
             atoms_coord.append(atom.coord)
 
-        if type(in_map) is str:
-            in_map = MapParser(in_map)
-        elif type(in_map) is MapParser:
+        if isinstance(in_map, MapParser):
             pass
+        elif os.path.exists(in_map):
+            in_map = MapParser(in_map)
         else:
-            raise TypeError('"in_map" should be a "MapObject" or in_dir to map file')
+            raise Exception('in_map should be MapParser object or a map file path not {}'.format(type(in_map)))
 
         voxel_size = in_map.voxel_size
         aver_voxel_size = sum(voxel_size) / 3
@@ -394,12 +396,12 @@ class ChopMap:
         if shifts is None:
             shifts = np.array([0, 0, 0])
 
-        if type(in_map) is str:
-            in_map = MapParser(in_map)
-        elif type(in_map) is MapParser:
+        if isinstance(in_map, MapParser):
             pass
+        elif os.path.exists(in_map):
+            in_map = MapParser(in_map)
         else:
-            raise TypeError('"in_map" should be a "MapObject" or path to map file')
+            raise Exception('in_map should be MapParser object or a map file path not {}'.format(type(in_map)))
 
         voxel_size = in_map.voxel_size
         aver_voxel_size = sum(voxel_size) / 3
@@ -494,12 +496,12 @@ class ChopMap:
         if shifts is None:
             shifts = np.array([0, 0, 0])
 
-        if type(in_map) is str:
-            in_map = MapParser(in_map)
-        elif type(in_map) is MapParser:
+        if isinstance(in_map, MapParser):
             pass
+        elif os.path.exists(in_map):
+            in_map = MapParser(in_map)
         else:
-            raise TypeError('"in_map" should be a "MapObject" or path to map file')
+            raise Exception('in_map should be MapParser object or a map file path not {}'.format(type(in_map)))
 
         voxel_size = in_map.voxel_size
         aver_voxel_size = sum(voxel_size) / 3
@@ -613,12 +615,12 @@ class ChopMap:
         for atom in model.get_atoms():
             atoms_coord.append(atom.coord)
 
-        if type(in_map) is str:
-            in_map = MapParser(in_map)
-        elif type(in_map) is MapParser:
+        if isinstance(in_map, MapParser):
             pass
+        elif os.path.exists(in_map):
+            in_map = MapParser(in_map)
         else:
-            raise TypeError('"in_map" should be a "MapObject" or in_dir to map file')
+            raise Exception('in_map should be MapParser object or a map file path not {}'.format(type(in_map)))
 
         voxel_size = in_map.voxel_size
         aver_voxel_size = sum(voxel_size) / 3

@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 setuptools.setup(
      name='threed_strudel',
-     version='0.9.7',
+     version='0.9.8',
      author="Andrei Istrate",
      author_email="andrei@ebi.ac.uk",
      description="Strudel package",
@@ -17,10 +17,7 @@ setuptools.setup(
      long_description_content_type="text/markdown",
      url="",
      packages=setuptools.find_packages(),
-     classifiers=[
-         "Programming Language :: Python :: 3",
-         "Operating System :: OS Independent"],
-     install_requires=['scipy', 'biopython', 'numpy', 'mrcfile', 'psutil'],
-     python_requires='>=3.6',
+     install_requires=['scipy', 'biopython==1.76', 'numpy', 'mrcfile', 'psutil'],
+     python_requires='>=2.6',
      license="Apache License"
  )

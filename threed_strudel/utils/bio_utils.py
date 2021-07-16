@@ -17,6 +17,8 @@ specific language governing permissions and limitations
 under the License.
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 __author__ = 'Andrei Istrate'
 __email__ = 'andrei@ebi.ac.uk'
 __date__ = '2019-10-09'
@@ -179,7 +181,7 @@ def residues2structure(residues):
         residues = [residues]
     for res in residues:
         if res.level != 'R':
-            raise Exception(f'Residue object expected (R), {res.level} given instead!')
+            raise Exception('Residue object expected (R), {} given instead!'.format(res.level))
 
     sb = StructureBuilder()
     sb.init_structure('structure')

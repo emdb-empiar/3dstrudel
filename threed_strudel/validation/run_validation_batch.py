@@ -17,6 +17,8 @@ specific language governing permissions and limitations
 under the License.
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 __author__ = 'Andrei Istrate'
 __email__ = 'andrei@ebi.ac.uk'
 __date__ = '2018-05-29'
@@ -109,8 +111,8 @@ def main():
                     #
                     # cu.memory_supervised_lsf_run(command, lib[0], out_path, start_mem=args.mem, np=args.np)
 
-                    command = f'bsub -o o_{lib[0]} -e e_{lib[0]} -M {args.mem} -n {args.np} strudel_mapMotifValidation.py ' \
-                              f'-p {entry[2]} -m {entry[1]} -l {lib_path} -o out -log log_{lib[0]}.log -np {args.np} {segm}'
+                    command = 'bsub -o o_{} -e e_{} -M {} -n {} strudel_mapMotifValidation.py ' \
+                              '-p {} -m {} -l {} -o out -log log_{}.log -np {} {}'.format(lib[0], lib[0], args.mem, args.np, entry[2], entry[1], lib_path, lib[0], args.np, segm)
                     # print(f'running {command}')
 
                     subprocess.call(command, cwd=out_path, shell=True)

@@ -20,6 +20,8 @@ specific language governing permissions and limitations
 under the License.
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 __author__ = 'Andrei Istrate'
 __email__ = 'andrei@ebi.ac.uk'
 __date__ = '2018-05-29'
@@ -738,7 +740,8 @@ class ChopModelMap:
         """
         try:
             os.makedirs(path)
-        except FileExistsError:
+        # except FileExistsError:
+        except IOError:
             pass
 
 import argparse

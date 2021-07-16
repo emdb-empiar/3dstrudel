@@ -1,7 +1,7 @@
 """
 The Penultimate Rotamer Library
 Simon C. Lovell, J. Michael Word, Jane S. Richardson, and David C. Richardson
-PROTEINS: Structure, Function, and Genetics 40:389–408 (2000)
+PROTEINS: Structure, Function, and Genetics 40:389-408 (2000)
 """
 import json
 import os

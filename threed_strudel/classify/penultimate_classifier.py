@@ -20,6 +20,8 @@ specific language governing permissions and limitations
 under the License.
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 __author__ = 'Andrei Istrate'
 __email__ = 'andrei@ebi.ac.uk'
 __date__ = '2018-05-29'
@@ -29,6 +31,7 @@ import sys
 import traceback
 import math
 import os
+import shutil
 import copy
 import argparse
 import json
@@ -176,7 +179,7 @@ class PenultimateClassifier:
 
     def create_model_list(self):
         """
-        Reads all .cif files in a directory and creates a list of structure objects
+        Reads all .cif, .pdb and .ent files in a directory and creates a list of structure objects
         """
         if self.residue_type is not None:
             r_type = self.residue_type
@@ -194,8 +197,8 @@ class PenultimateClassifier:
             try:
                 structure = bio_utils.load_structure(os.path.join(self.in_dir, element))
             except:
-                # If the residue file could not be read for some reason if will move it
-                self.log.info('Failed to process %s file\nMoving it to and related files %s\nCheck %s for details',
+                # If the residue file could not be read for some reason it will move it
+                self.log.info('Failed to process %s file\nMoving it and related files to %s\nCheck %s for details',
                               element, self.corrupted_files_dir, self.model_err_out_path)
                 exc_type, exc_value, exc_traceback = sys.exc_info()
                 traceback.print_tb(exc_traceback, file=self.model_err_out)
@@ -204,7 +207,7 @@ class PenultimateClassifier:
                 related_files = [i for i in files if i.startswith(prefix)]
                 if related_files:
                     for file in related_files:
-                        os.replace(os.path.join(self.in_dir, file), os.path.join(self.corrupted_files_dir, file))
+                        shutil.move(os.path.join(self.in_dir, file), os.path.join(self.corrupted_files_dir, file))
             else:
                 tt = self.get_res_type(structure)
                 if tt is not None:
@@ -218,7 +221,7 @@ class PenultimateClassifier:
                                         '\nPlease restart with defined "residue_type" parameter')
 
         if not str_object_list:
-            raise Exception(f'There are no atomic residue files in the specified directory: {self.in_dir}')
+            raise Exception('There are no atomic residue files in the specified directory: {}'.format(self.in_dir))
         return str_object_list
 
     @staticmethod
@@ -281,7 +284,7 @@ class PenultimateClassifier:
     def _get_dihedral_angle(residue, atom_names):
 
         if len(atom_names) < 4:
-            raise Exception(f"Minimum 4 atom names needed, {len(atom_names)} were given")
+            raise Exception("Minimum 4 atom names needed, {} were given".format(len(atom_names)))
 
         v = [None for _ in range(len(atom_names))]
         atoms = residue.get_atoms()
@@ -295,7 +298,7 @@ class PenultimateClassifier:
             for i, v in enumerate(v):
                 if v is None:
                     missing.append(atom_names[i])
-            raise Exception(f"Missing atoms in the input residue: {' '.join(missing)}")
+            raise Exception("Missing atoms in the input residue: {}".format(' '.join(missing)))
 
         angle = calc_dihedral(v[0], v[1], v[2], v[3])
         angle = math.degrees(angle)
@@ -329,7 +332,7 @@ class PenultimateClassifier:
             for i, v in enumerate([vector1, vector2, vector3, vector4]):
                 if v is None:
                     missing.append(atom_names[i])
-            raise Exception(f"Missing atoms in the input residue: {' '.join(missing)}")
+            raise Exception("Missing atoms in the input residue: {}".format(' '.join(missing)))
 
         angle = calc_dihedral(vector1, vector2, vector3, vector4)
         angle = math.degrees(angle)

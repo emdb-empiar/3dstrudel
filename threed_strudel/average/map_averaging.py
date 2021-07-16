@@ -18,6 +18,8 @@ specific language governing permissions and limitations
 under the License.
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 __author__ = 'Andrei Istrate'
 __email__ = 'andrei@ebi.ac.uk'
 __date__ = '2018-05-29'
@@ -148,9 +150,12 @@ class MapAveraging:
                         self.log.debug('spent on averaging %s', func.report_elapsed(t))
 
                         # Copy the reference atomic models to the motifs directory
-                        prefix = f'{name.split("-")[0]}_rotamer_{class_name.split("_")[-1]}{self.motif_suffix}'
-                        map_motif_name = f'{prefix}{self.motif_suffix}.mrc'
-                        model_motif_name = f'{prefix}{self.motif_suffix}.cif'
+                        # prefix = f'{name.split("-")[0]}_rotamer_{class_name.split("_")[-1]}{self.motif_suffix}'
+                        prefix = '{}_rotamer_{}{}'.format(name.split("-")[0], class_name.split("_")[-1], self.motif_suffix)
+                        # map_motif_name = f'{prefix}{self.motif_suffix}.mrc'
+                        map_motif_name = '{}{}.mrc'.format(prefix, self.motif_suffix)
+                        # model_motif_name = f'{prefix}{self.motif_suffix}.cif'
+                        model_motif_name = '{}{}.cif'.format(prefix, self.motif_suffix)
 
                         if len(class_dict['class_pairs']) >= self.min_reliable_number:
                             dst = self.motifs_dir
@@ -246,7 +251,7 @@ class MapAveraging:
             if model.endswith('representative.cif'):
                 tmp = model.split('_representative')[0] + '.cif'
                 class_dict['reference_model'] = os.path.join(self.models_dir, tmp)
-                class_dict['reference_mrc'] = os.path.join(self.models_dir, f"{tmp.split('_')[0]}{self.map_suffix}")
+                class_dict['reference_mrc'] = os.path.join(self.models_dir, "{}{}".format(tmp.split('_')[0], self.map_suffix))
                 pair = (tmp.split('_')[0] + self.map_suffix, tmp)
                 class_dict['class_pairs'].append(pair)
 
