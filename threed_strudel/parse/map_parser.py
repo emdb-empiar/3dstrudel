@@ -31,7 +31,7 @@ import numpy as np
 
 
 class MapParser:
-    def __init__(self, map_path=''):
+    def __init__(self, map_path='', make_xyz=True):
         self.id = ''
         self.map_path = map_path
         self.data = None
@@ -50,11 +50,13 @@ class MapParser:
         self.index_shifts = (0, 0, 0)
         self.coord_to_index = self._coord_to_index_orthogonal
         self.coord_to_index_int = self._coord_to_index_orthogonal_int
+        self.label = None
         if os.path.exists(map_path):
-            self._load_map()
+            self._load_map(make_xyz)
 
-    def _load_map(self, default_axis=True):
+    def _load_map(self, make_xyz=True):
         with mrcfile.open(self.map_path, mode='r+', permissive=True) as mrc:
+            self.label = mrc.header.label
             self.data = mrc.data
             self.n_start = self._get_n_start(mrc)
             self.m = self._get_m(mrc)
@@ -64,7 +66,7 @@ class MapParser:
             self.origin = (mrc.header.origin.x, mrc.header.origin.y, mrc.header.origin.z)
             self.id = os.path.basename(self.map_path).split('.')[0]
             self._get_axis_order(mrc)
-            if default_axis:
+            if make_xyz:
                 self._swap_axes()
             self.voxel_size = self._get_voxel_size(mrc)
             self.fraction_matrix = self.calc_fraction_matrix()
@@ -138,6 +140,7 @@ class MapParser:
             mr.header.mapc = self.mapc
             mr.header.mapr = self.mapr
             mr.header.maps = self.maps
+            mr.header.label = self.label
 
     def copy_header(self, map_obj):
         self.voxel_size = map_obj.voxel_size
