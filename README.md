@@ -36,6 +36,8 @@ Superimpose and average amino acid residues maps using atom models as guide (req
 
      strudel_mapAveraging.py [options]
      
+# Tutorials
+[Introduction to map-model validation with Strudel Score](https://drive.google.com/file/d/16C2VWWnKsBnaaDd0KlX9Y0mRynPS_qdf/view)
 
     
 # License
