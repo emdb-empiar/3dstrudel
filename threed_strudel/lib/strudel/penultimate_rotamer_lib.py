@@ -10,3 +10,6 @@ import os
 basedir = os.path.dirname(os.path.abspath(__file__))
 with open(os.path.join(basedir, 'penultimate_lib.json')) as j:
     PENULTIMATE_2000 = json.load(j)
+
+with open(os.path.join(basedir, 'rotamer_bounds_lib.json')) as j:
+    ROTAMER_BOUNDS = json.load(j)

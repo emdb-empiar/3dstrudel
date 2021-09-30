@@ -45,6 +45,10 @@ import threed_strudel.utils.functions as func
 import threed_strudel.nomenclature as nomenclature
 from threed_strudel.utils import bio_utils
 import threed_strudel.lib.strudel.penultimate_rotamer_lib as p_lib
+from threed_strudel.classify.rotamer_utils import generate_molprobity_interpolator
+
+OUTLIER_THRESHOLD = 0.003
+ALLOWED_THRESHOLD = 0.02
 
 
 class PenultimateClassifier:
@@ -106,7 +110,7 @@ class PenultimateClassifier:
         self.symmetric_chi = nomenclature.SYMMETRIC_CHI
         self.rotamers_data_structure = self.set_rotamers_data_structure()
         # self.run_classification()
-
+        self.interpolator = None
     def run_classification(self):
         """
 
@@ -128,9 +132,28 @@ class PenultimateClassifier:
             self.rotamer_classes = [struct_object_list, []]
             self.rotamer_classes[0][0].id = self.rotamer_classes[0][0].id + '_representative'
         else:
+            self.interpolator = generate_molprobity_interpolator(self.residue_type)
             rotamers = self.create_rotamers(self.residue_type)
             self.rotamers = rotamers
             self.rotamer_classes = self.find_rotamers(struct_object_list, rotamers)
+
+            #filter same name rotamers
+            rotamers_tmp = []
+            classes_tmp = []
+            names = []
+
+            for i, rotamer in enumerate(rotamers):
+                name = rotamer['name']
+                if rotamers_tmp is [] or name not in names:
+                    rotamers_tmp.append(rotamer)
+                    names.append(name)
+                    classes_tmp.append(self.rotamer_classes[i])
+                else:
+                    index = names.index(name)
+                    classes_tmp[index] = classes_tmp[index] + self.rotamer_classes[i]
+            classes_tmp.append(self.rotamer_classes[-1])
+            self.rotamer_classes = classes_tmp
+            self.rotamers = rotamers_tmp
 
             for class_ in self.rotamer_classes:
                 if len(class_) > 200:
@@ -158,7 +181,7 @@ class PenultimateClassifier:
                     return data
             except:
                 pass
-        data = p_lib.PENULTIMATE_2000
+        data = p_lib.ROTAMER_BOUNDS
         return data
 
     def setup_log(self, warning_level):
@@ -282,7 +305,6 @@ class PenultimateClassifier:
 
     @staticmethod
     def _get_dihedral_angle(residue, atom_names):
-
         if len(atom_names) < 4:
             raise Exception("Minimum 4 atom names needed, {} were given".format(len(atom_names)))
 
@@ -301,14 +323,21 @@ class PenultimateClassifier:
             raise Exception("Missing atoms in the input residue: {}".format(' '.join(missing)))
 
         angle = calc_dihedral(v[0], v[1], v[2], v[3])
+
         angle = math.degrees(angle)
+        angle = angle % 360
+        if angle < 0:
+            angle += 360
         if len(atom_names) > 4:
             angle1 = calc_dihedral(v[0], v[1], v[2], v[4])
             angle1 = math.degrees(angle1)
-            angles = [angle, angle1]
+            angle1 = angle1 % 360
+            if angle1 < 0:
+                angle1 += 360
+            return min([angle, angle1])
         else:
-            angles = [angle]
-        return angles
+            return angle
+
 
     @staticmethod
     def _get_dihedral_angle1(model, atom_names):
@@ -355,36 +384,31 @@ class PenultimateClassifier:
         classes.append([])
 
         for model in str_object_list:
-            sorted_ = False
             angles = {}
             for key, value in rotamers[0].items():
                 if key not in ('name', 'id'):
                     angles[key] = self._get_dihedral_angle(model, value['atoms'])
-
-            for rotamer in rotamers:
-                belongs = True
-                rotamer_nr = None
-                for key, value in rotamer.items():
-                    if key == 'id':
-                        rotamer_nr = value
-                    elif key == 'name':
-                        pass
-                    else:
-                        min_ = value['angle_val'] - value['angle_width'] / 2
-                        max_ = value['angle_val'] + value['angle_width'] / 2
-                        if len(angles[key]) > 1:
-                            inside1 = self.angle_in_interval(angles[key][0], min_, max_)
-                            inside2 = self.angle_in_interval(angles[key][1], min_, max_)
-                            inside = inside1 or inside2
-                        else:
-                            inside = self.angle_in_interval(angles[key][0], min_, max_)
-                        if not inside:
-                            belongs = False
-                if belongs and not sorted_:
-                    classes[rotamer_nr - 1].append(model)
-                    sorted_ = True
-            if not sorted_:
+            rot_val = self.interpolator(list(angles.values()))
+            if rot_val < ALLOWED_THRESHOLD:
                 classes[-1].append(model)
+            else:
+
+                for rotamer in rotamers:
+                    belongs = True
+                    rotamer_nr = None
+                    for key, value in rotamer.items():
+                        if key == 'id':
+                            rotamer_nr = value
+                        elif key == 'name':
+                            pass
+                        else:
+                            min_ = value['angle_val'] - value['angle_width'] / 2
+                            max_ = value['angle_val'] + value['angle_width'] / 2
+                            inside = self.angle_in_interval(angles[key], min_, max_)
+                            if not inside:
+                                belongs = False
+                    if belongs:
+                        classes[rotamer_nr - 1].append(model)
         return classes
 
     @staticmethod
@@ -554,7 +578,7 @@ class PenultimateClassifier:
         min_indices = []
         max_weight = max(weights)
         if len(weights) > 10:
-            ln = 10
+            ln = int(len(weights)*0.1)
         else:
             ln = len(weights)
         for i in range(ln):

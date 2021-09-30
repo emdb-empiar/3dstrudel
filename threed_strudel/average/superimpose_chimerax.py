@@ -94,9 +94,9 @@ for pair in class_dict['class_pairs'][:]:
     else:
         out_model = os.path.join(out_dir, pair[1])
         rc.run('save {} format mmcif models #4'.format(out_model))
-    rc.run('vop resample  #3 onGrid #1')
-    out_map = os.path.join(out_dir, pair[0])
-    rc.run('save {} models #5'.format(out_map))
+        rc.run('vop resample  #3 onGrid #1')
+        out_map = os.path.join(out_dir, pair[0])
+        rc.run('save {} models #5'.format(out_map))
     # rc.run('close #3 #4 #5')
     # If just close the maps Chimera keeps the fitmap results in the memory (~1.GB per 10000 fits)
     # Close session deletes the results

@@ -455,6 +455,7 @@ def main():
                         help="Classes folders prefix")
     parser.add_argument("-b", "--box", dest="box", default=14, help="Output motifs map box size")
     parser.add_argument("-m", "--mot_dir", dest="mot", default=None, help="Output motifs directory")
+    parser.add_argument("-w", "--warning_level", dest="warning_level", default='info', help="Warning level")
     parser.add_argument("-s", "--scaling", dest="scaling", default='standardise',
                         help="Image scaling normalization: 'normalise-all' - full intensity range, "
                              "'normalise-positive' - negative values are sett to 0 "
@@ -464,7 +465,8 @@ def main():
     args = parser.parse_args()
 
     MapAveraging(args.m_dir, args.r_dir, args.rot_prefix, args.class_prefix, args.box,
-                 args.mot, scaling=args.scaling, min_reliable_nr=args.rel_nr)
+                 args.mot, scaling=args.scaling, min_reliable_nr=args.rel_nr, log_path=args.log,
+                 warning_level=args.warning_level)
 
 
 if __name__ == '__main__':
