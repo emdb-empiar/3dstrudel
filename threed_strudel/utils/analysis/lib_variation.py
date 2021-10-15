@@ -280,7 +280,7 @@ def plot_all_average_corr(data_path, out_folder=None, action='mean'):
     # tmp = csv_files
     for file in tmp:
         print(file)
-        res_range = file.split('.csv')[0]
+        res_range = file.split('.csv')[0].split('_')[-1]
         path = os.path.join(data_path, file)
         data = pd.read_csv(path)
         filtered = filter_data(data)
@@ -372,7 +372,7 @@ def generate_all_drid_similarity(data_path, out_folder=None):
     # tmp = csv_files
     for file in tmp:
         print(file)
-        res_range = file.split('.csv')[0]
+        res_range = file.split('.csv')[0].split('_')[-1]
         path = os.path.join(data_path, file)
         data = pd.read_csv(path)
         filtered = extract_max_corr(data)
@@ -390,12 +390,12 @@ def generate_all_drid_similarity(data_path, out_folder=None):
 # filter_data(data)
 
 # statistics(path)
-data_path = '/Volumes/data/libs/from_ftp/strudel-libs_ver-2.0_voxel-0.5/libs_similarity'
-fig_path = '/Volumes/data/libs/from_ftp/strudel-libs_ver-2.0_voxel-0.5/libs_similarity/figs'
-# plot_all_average_corr(data_path, out_folder=fig_path)
+data_path = '/Users/andrei/Documents/Project_data/3D-STRUDEL/libs.3/out'
+fig_path = '/Users/andrei/Documents/Project_data/3D-STRUDEL/libs.3/pics_1'
+plot_all_average_corr(data_path, out_folder=fig_path)
 ## plot_all_corr(data_path, out_folder=fig_path)
 
-generate_all_drid_similarity(data_path, out_folder=fig_path)
+# generate_all_drid_similarity(data_path, out_folder=fig_path)
 
 
 
