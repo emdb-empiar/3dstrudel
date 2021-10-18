@@ -144,17 +144,19 @@ def csv_to_top_csv(csv_path, out_csv_path, outlier_diff=0.05, score_decimal=5):
             tmp = {}
             if any(['None' in v for v in row.values()]):
                 row_d[k.COMPLETE_DATA] = 0
+            elif any(['' in v for v in row.values()]):
+                row_d[k.COMPLETE_DATA] = 0
             else:
                 row_d[k.COMPLETE_DATA] = 1
             for key, value in row.items():
                 code = key[:3]
                 if code.upper() in codes:
                     corr, _, matrix = value.partition('_m_')
-                    if corr == 'None':
+                    if corr == 'None' or corr == '':
                         corr = None
                     else:
                         corr = round(float(corr), score_decimal)
-                    if matrix == 'None':
+                    if matrix == 'None' or matrix == '':
                         matrix = None
                     if code not in tmp.keys():
                         if 'None' not in value:
@@ -194,10 +196,15 @@ def csv_to_top_csv(csv_path, out_csv_path, outlier_diff=0.05, score_decimal=5):
                         row_d[k.M_TOP_NAME] = value[1]
                         row_d[k.TOP_CC] = value[0]
                         row_d[k.M_TOP_MATRIX] = value[2]
-
-            diff = (row_d[k.TOP_CC] - row_d[k.SAME_TYPE_CC]) / row_d[k.TOP_CC]
-            row_d[k.DELTA] = round(diff, 4)
-            if diff > outlier_diff:
+            try:
+                diff = (row_d[k.TOP_CC] - row_d[k.SAME_TYPE_CC]) / row_d[k.TOP_CC]
+                row_d[k.DELTA] = round(diff, 4)
+            except TypeError:
+                diff = None
+                row_d[k.DELTA] = diff
+            if diff is None:
+                row_d[k.OUTLIER] = None
+            elif diff > outlier_diff:
                 row_d[k.OUTLIER] = 1
             else:
                 row_d[k.OUTLIER] = 0
@@ -235,13 +242,15 @@ def csv_to_top_csv_scores_only(csv_path, out_csv_path, outlier_diff=0.05, score_
             row_d[k.ID] = i
             if any([v.startswith('None') for v in row.values()]):
                 row_d[k.COMPLETE_DATA] = 0
+            elif any(['' in v for v in row.values()]):
+                row_d[k.COMPLETE_DATA] = 0
             else:
                 row_d[k.COMPLETE_DATA] = 1
             for key, value in row.items():
                 code = key[:3]
                 if code.upper() in codes:
                     corr = value.partition('_m_')[0]
-                    if corr == 'None':
+                    if corr == 'None' or corr == '':
                         corr = None
                     else:
                         corr = round(float(corr), score_decimal)
@@ -275,9 +284,15 @@ def csv_to_top_csv_scores_only(csv_path, out_csv_path, outlier_diff=0.05, score_
                         row_d[k.M_TOP_TYPE] = key
                         row_d[k.TOP_CC] = value[0]
 
-            diff = (row_d[k.TOP_CC] - row_d[k.SAME_TYPE_CC]) / row_d[k.TOP_CC]
-            row_d[k.DELTA] = round(diff, 4)
-            if diff > outlier_diff:
+            try:
+                diff = (row_d[k.TOP_CC] - row_d[k.SAME_TYPE_CC]) / row_d[k.TOP_CC]
+                row_d[k.DELTA] = round(diff, 4)
+            except TypeError:
+                diff = None
+                row_d[k.DELTA] = diff
+            if diff is None:
+                row_d[k.OUTLIER] = None
+            elif diff > outlier_diff:
                 row_d[k.OUTLIER] = 1
             else:
                 row_d[k.OUTLIER] = 0
@@ -666,7 +681,7 @@ def main():
 
     if args.log is not None:
         dirname = os.path.dirname(args.log)
-        if dirname is not '' and not os.path.exists(dirname):
+        if dirname != '' and not os.path.exists(dirname):
             os.makedirs(dirname)
 
     logging.basicConfig(filename=args.log, level=logging.INFO, format='%(levelname)s:  %(message)s')

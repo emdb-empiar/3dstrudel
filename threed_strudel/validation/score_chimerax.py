@@ -422,7 +422,7 @@ def split_list(inp_list, nr):
 def check_known_correlations(inp_corr_list, lib):
     incomplete_indices = []
     for index, entry in enumerate(inp_corr_list):
-        if len(entry.keys()) - 5 < len(lib) or "None" in entry.values():
+        if len(entry.keys()) - 5 < len(lib) or None in entry.values():
             incomplete_indices.append(index)
         incomplete_indices.sort(reverse=True)
 
