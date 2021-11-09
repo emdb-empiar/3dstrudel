@@ -188,6 +188,7 @@ class ChopMap:
             origin = ((middle_z - radius + n_st[0]) * out_map.voxel_size[0] + in_map.origin[0],
                       (middle_y - radius + n_st[1]) * out_map.voxel_size[1] + in_map.origin[1],
                       (middle_x - radius + n_st[2]) * out_map.voxel_size[2] + in_map.origin[2])
+            print('chop_origin', origin)
             out_map.set_origin(origin)
             out_map.n_start = (0, 0, 0)
 

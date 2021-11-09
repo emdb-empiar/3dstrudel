@@ -222,9 +222,9 @@ class MapParser:
 
     def _calc_index_shift(self):
         if self.origin == (0, 0, 0):
-            x = self.n_start[0]
+            x = self.n_start[2]
             y = self.n_start[1]
-            z = self.n_start[2]
+            z = self.n_start[0]
         else: #self.n_start != (0, 0, 0):
             x = self.origin[2] / self.voxel_size[2]
             y = self.origin[1] / self.voxel_size[1]

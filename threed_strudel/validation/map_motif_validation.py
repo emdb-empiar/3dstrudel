@@ -142,9 +142,8 @@ def csv_to_top_csv(csv_path, out_csv_path, outlier_diff=0.05, score_decimal=5):
             codes = nomenclature.AA_RESIDUES_LIST
             row_d = {}
             tmp = {}
-            if any(['None' in v for v in row.values()]):
-                row_d[k.COMPLETE_DATA] = 0
-            elif any(['' in v for v in row.values()]):
+
+            if any(['' == v for v in row.values()]):
                 row_d[k.COMPLETE_DATA] = 0
             else:
                 row_d[k.COMPLETE_DATA] = 1
@@ -159,11 +158,11 @@ def csv_to_top_csv(csv_path, out_csv_path, outlier_diff=0.05, score_decimal=5):
                     if matrix == 'None' or matrix == '':
                         matrix = None
                     if code not in tmp.keys():
-                        if 'None' not in value:
+                        if value != '':
                             tmp[code] = [corr, key, matrix]
                         else:
                             tmp[code] = [None, None, None]
-                    elif tmp[code][0] is not None and 'None' not in value:
+                    elif tmp[code][0] is not None and corr is not None:
                         if tmp[code][0] < corr:
                             tmp[code][0] = corr
                             tmp[code][1] = key
@@ -240,9 +239,8 @@ def csv_to_top_csv_scores_only(csv_path, out_csv_path, outlier_diff=0.05, score_
             row_d = {}
             tmp = {}
             row_d[k.ID] = i
-            if any([v.startswith('None') for v in row.values()]):
-                row_d[k.COMPLETE_DATA] = 0
-            elif any(['' in v for v in row.values()]):
+
+            if any(['' == v for v in row.values()]):
                 row_d[k.COMPLETE_DATA] = 0
             else:
                 row_d[k.COMPLETE_DATA] = 1
@@ -255,7 +253,10 @@ def csv_to_top_csv_scores_only(csv_path, out_csv_path, outlier_diff=0.05, score_
                     else:
                         corr = round(float(corr), score_decimal)
                     if code not in tmp.keys():
-                        tmp[code] = [corr, key]
+                        if value != '':
+                            tmp[code] = [corr, key]
+                        else:
+                            tmp[code] = [None, None]
                     elif corr is not None:
                         if tmp[code][0] is None:
                             tmp[code][0] = corr
