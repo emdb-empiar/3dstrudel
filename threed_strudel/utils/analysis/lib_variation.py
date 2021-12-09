@@ -216,17 +216,20 @@ def plot_multiple(data_list, plot_path=None, y_lim=(0, 1)):
         x_ticks = [x+width for x in x_ticks]
         # ax.bar(data.keys(), data.values(), label=f'{res_range}')
         hatch = next(hatches)
-        bar = ax.bar(x_ticks, data.values(), width, label=f'{res_range}')
+        bar = ax.bar(x_ticks, data.values(), width, label=f'{res_range} $\AA$')
         print(bar)
         for b in bar:
             b.set_hatch(hatch)
-    ax.legend()
+    ax.legend(prop={'size': 13})
 
     ax.set_xticklabels(data_list[0][0].keys(), rotation=0)
     ax.set_xlim(-2*width, x_ticks[-1] + 2*width)
     ax.set_ylim(y_lim)
-    ax.set_xlabel('Motif type')
-    ax.set_ylabel('1-correlation')
+    x = plt.xlabel('Motif type')
+    x.set_fontsize(17)
+    # ax.set_ylabel('1-correlation')
+    y = plt.ylabel('1-correlation')
+    y.set_fontsize(17)
 
     if plot_path is None:
         plt.show()
@@ -391,7 +394,9 @@ def generate_all_drid_similarity(data_path, out_folder=None):
 
 # statistics(path)
 data_path = '/Users/andrei/Documents/Project_data/3D-STRUDEL/libs.3/out'
-fig_path = '/Users/andrei/Documents/Project_data/3D-STRUDEL/libs.3/pics_1'
+fig_path = '/Users/andrei/Documents/Project_data/3D-STRUDEL/libs.3/pics_2'
+if not os.path.exists(fig_path):
+    os.makedirs(fig_path)
 plot_all_average_corr(data_path, out_folder=fig_path)
 ## plot_all_corr(data_path, out_folder=fig_path)
 

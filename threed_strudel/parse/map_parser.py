@@ -238,6 +238,12 @@ class MapParser:
         self.index_shifts = self._calc_index_shift()
 
     def grid_resample_emda(self, target_voxel):
+        """
+        Increase or decrease map grid sampling (based on resample function in
+        https://gitlab.com/ccpem/emda/-/blob/master/emda/core/iotools.py
+        by Rangana Warshamanage).
+        :param target_voxel: target voxel size
+        """
         x = self.data
 
         if x.shape[0] % 2 != 0:

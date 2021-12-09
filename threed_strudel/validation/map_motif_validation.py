@@ -198,11 +198,11 @@ def csv_to_top_csv(csv_path, out_csv_path, outlier_diff=0.05, score_decimal=5):
             try:
                 diff = (row_d[k.TOP_CC] - row_d[k.SAME_TYPE_CC]) / row_d[k.TOP_CC]
                 row_d[k.DELTA] = round(diff, 4)
-            except TypeError:
+            except:
                 diff = None
                 row_d[k.DELTA] = diff
             if diff is None:
-                row_d[k.OUTLIER] = None
+                row_d[k.OUTLIER] = 1
             elif diff > outlier_diff:
                 row_d[k.OUTLIER] = 1
             else:
@@ -213,7 +213,8 @@ def csv_to_top_csv(csv_path, out_csv_path, outlier_diff=0.05, score_decimal=5):
                 row_d[key + k.TYPE_TOP_NAME] = value[1]
                 row_d[key + k.TYPE_TOP_MATRIX] = value[2]
             data_frame.append(row_d)
-
+    for i in data_frame:
+        i[k.CHAIN] = str(i[k.CHAIN])
     data_frame.sort(key=operator.itemgetter(k.CHAIN, k.RES_NR))
     dict_list_to_csv(data_frame, out_csv_path)
 
@@ -288,11 +289,11 @@ def csv_to_top_csv_scores_only(csv_path, out_csv_path, outlier_diff=0.05, score_
             try:
                 diff = (row_d[k.TOP_CC] - row_d[k.SAME_TYPE_CC]) / row_d[k.TOP_CC]
                 row_d[k.DELTA] = round(diff, 4)
-            except TypeError:
+            except:
                 diff = None
                 row_d[k.DELTA] = diff
             if diff is None:
-                row_d[k.OUTLIER] = None
+                row_d[k.OUTLIER] = 1
             elif diff > outlier_diff:
                 row_d[k.OUTLIER] = 1
             else:
@@ -300,6 +301,8 @@ def csv_to_top_csv_scores_only(csv_path, out_csv_path, outlier_diff=0.05, score_
             for key, value in tmp.items():
                 row_d[key] = value[0]
             data_frame.append(row_d)
+    for i in data_frame:
+        i[k.CHAIN] = str(i[k.CHAIN])
     data_frame.sort(key=operator.itemgetter(k.CHAIN, k.RES_NR))
     dict_list_to_csv(data_frame, out_csv_path)
 

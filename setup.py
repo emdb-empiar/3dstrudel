@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 setuptools.setup(
      name='threed_strudel',
-     version='0.9.14',
+     version='0.9.16',
      author="Andrei Istrate",
      author_email="andrei@ebi.ac.uk",
      description="Strudel package",

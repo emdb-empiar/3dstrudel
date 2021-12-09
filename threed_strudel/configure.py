@@ -5,7 +5,7 @@ import os
 
 # ChimeraX executable path
 # CHIMERA_PATH = '/nfs/msd/work2/andrei/soft/chimerax/18-12/redhat/opt/UCSF/ChimeraX-daily/bin/ChimeraX'
-CHIMERA_PATH = ''
+CHIMERA_PATH = '/Applications/ChimeraX-1.2.5.app/Contents/bin/ChimeraX'
 #'/Applications/ChimeraX-1.1.1.app/Contents/MacOS/ChimeraX'
 
 

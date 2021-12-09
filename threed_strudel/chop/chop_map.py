@@ -115,12 +115,10 @@ class ChopMap:
         z_indices = []
         for atom in atoms_coord:
             x_index, y_index, z_index = in_map.coord_to_index(atom)
-            if any([x_index, y_index, z_index]) < 0:
-                print("Atom outside map")
-            else:
-                x_indices.append(x_index)
-                y_indices.append(y_index)
-                z_indices.append(z_index)
+
+            x_indices.append(x_index)
+            y_indices.append(y_index)
+            z_indices.append(z_index)
         # Find the voxel located in the middle of the atomic residue
         # and the maximum molecule size in grid points
         deltas = []
@@ -154,11 +152,16 @@ class ChopMap:
         for x in range(new_dimension):
             for y in range(new_dimension):
                 for z in range(new_dimension):
-                    try:
-                        new_data[x, y, z] = in_map.data[x + middle_x - radius, y + middle_y - radius,
-                                                        z + middle_z - radius]
-                    except IndexError:
+                    x1 = x + middle_x - radius
+                    y1 = y + middle_y - radius
+                    z1 = z + middle_z - radius
+                    if any([x1 < 0, y1 < 0, z1 < 0]):
                         pass
+                    else:
+                        try:
+                            new_data[x, y, z] = in_map.data[x1, y1, z1]
+                        except IndexError:
+                            pass
         # Calculate the new cell size
         voxel_size = in_map.voxel_size
         new_cell = (round(new_dimension * voxel_size[0], 3),
@@ -188,7 +191,7 @@ class ChopMap:
             origin = ((middle_z - radius + n_st[0]) * out_map.voxel_size[0] + in_map.origin[0],
                       (middle_y - radius + n_st[1]) * out_map.voxel_size[1] + in_map.origin[1],
                       (middle_x - radius + n_st[2]) * out_map.voxel_size[2] + in_map.origin[2])
-            print('chop_origin', origin)
+
             out_map.set_origin(origin)
             out_map.n_start = (0, 0, 0)
 
@@ -257,13 +260,15 @@ class ChopMap:
         Chop map using a soft mask with a given radius (hard_radius + soft_radius)
         around the atomic residue. A cosine function is used to create the soft mask.
         :param mask_path: mask output path
-        :param model: biopython model object
+        :param model: biopython model object or atomic model path
         :param in_map: path to the input map or strudel map object
         :param out_map: out_map: output map path
         :param hard_radius: hard radius
         :param soft_radius: soft radius, cosine function
         :return strudel map object if out_map not given otherwise None
          """
+        if isinstance(model, str):
+            model = bu.load_structure(model)
         # Get atom coordinates
         atoms_coord = []
         for atom in model.get_atoms():
@@ -295,6 +300,8 @@ class ChopMap:
                 for y in range(y_index - ry, y_index + ry):
                     for z in range(z_index - rz, z_index + rz):
                         # Calculate the distance between the current atom and the current voxel
+                        if any([x < 0, y < 0, z < 0]):
+                            continue
                         d = aver_voxel_size * math.sqrt((x - x_index) ** 2 + (y - y_index) ** 2 + (z - z_index) ** 2)
 
                         # Assign mask values based to the distance to the atoms
@@ -423,7 +430,8 @@ class ChopMap:
             for x in range(xyz_int[0] - r, xyz_int[0] + r):
                 for y in range(xyz_int[1] - r, xyz_int[1] + r):
                     for z in range(xyz_int[2] - r, xyz_int[2] + r):
-
+                        if any([x < 0, y < 0, z < 0]):
+                            continue
                         near_ds = [100]
                         for n_atom in near_atoms:
                             n_xyz = in_map.coord_to_index(n_atom.coord - shifts)
@@ -530,7 +538,8 @@ class ChopMap:
             for x in range(xyz_int[0] - r, xyz_int[0] + r):
                 for y in range(xyz_int[1] - r, xyz_int[1] + r):
                     for z in range(xyz_int[2] - r, xyz_int[2] + r):
-
+                        if any([x < 0, y < 0, z < 0]):
+                            continue
                         # Calculate the distance between the current atom and the current voxel
                         d = aver_voxel_size * math.sqrt((x - xyz[0]) ** 2 + (y - xyz[1]) ** 2 + (z - xyz[2]) ** 2)
                         if d <= delta1:

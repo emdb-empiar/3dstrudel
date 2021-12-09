@@ -173,8 +173,9 @@ def score_residue(res_map, res_model, loaded_lib, process_log):
                 correlation1 = fit1.correlation()
             except Exception as err:
                 process_log.error('Chimerax user error!! %s in map %s at sdLevel =  %s', err, lib_vol.name, SD_LEVEL - 0.1)
-                process_log.info('Could not calculate %s and %s correlation', vol.name, lib_vol.name)
-                correlation1 = None
+                process_log.info('Could not calculate %s and %s correlation. This is most likely due to missing map '
+                                 'values above the threshold level. Assigning 0 correlation', vol.name, lib_vol.name)
+                correlation1 = 0
         matrix = ','.join(f"{round(x, 5)}" for x in tuple(lib_vol.position.matrix.flat))
         try:
             fit2 = run_x(f'fitmap #{vol.id_string} inMap #{lib_vol.id_string} metric correlation')
@@ -187,12 +188,12 @@ def score_residue(res_map, res_model, loaded_lib, process_log):
                 correlation2 = fit2.correlation()
             except Exception as err:
                 process_log.info('User error!! %s %s', err, lib_vol.name)
-                correlation2 = None
-        if all([correlation1, correlation2]):
-            min_corr = round(min([correlation1, correlation2]), 5)
-            res_score.append((motif, min_corr, matrix))
-        else:
-            res_score.append((motif, None, None))
+                correlation2 = 0
+        # if all([correlation1, correlation2]):
+        min_corr = round(min([correlation1, correlation2]), 5)
+        res_score.append((motif, min_corr, matrix))
+        # else:
+        #     res_score.append((motif, None, None))
         # This resets the view after fitting
         run_x('view orient; view initial')
 
@@ -276,6 +277,9 @@ def slave(pairs_list, lib, score_list, lock, json_out_path, csv_out_path=None, c
 
         res_name = os.path.basename(pair[1]).split('.')[0]
         name_lst = res_name.split('-')
+        if name_lst[1] == '':
+            name_lst[2] = '-' + name_lst[2]
+            del name_lst[1]
         res_type = name_lst[0]
         res_nr = name_lst[1]
         chain = name_lst[2]
