@@ -29,10 +29,16 @@ chop = ChopMap()
 #         int(res_nr)
 #     except ValueError:
 #         print(pair)
-ll = 'asn--1-A_soft.mrc'.split('-')
-ll1 = []
+# ll = 'asn--1-A_soft.mrc'.split('-')
+# ll1 = []
+#
+# if ll[1] == '':
+#     ll[2] = '-' + ll[2]
+#     del ll[1]
+# print(ll)
 
-if ll[1] == '':
-    ll[2] = '-' + ll[2]
-    del ll[1]
-print(ll)
+from threed_strudel.validation.map_motif_validation import csv_to_top_csv_scores_only
+
+in_p = '/Volumes/data/debug_strudel/deb1/scores.csv'
+ou_p = '/Volumes/data/debug_strudel/deb1/scores_ou_t.csv'
+csv_to_top_csv_scores_only(in_p, ou_p)

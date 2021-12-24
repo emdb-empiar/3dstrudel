@@ -200,7 +200,7 @@ def plot_single(data_dict, resolution_range, plot_path=None):
 
 
 def plot_multiple(data_list, plot_path=None, y_lim=(0, 1)):
-    hatches = itertools.cycle(['///', '+++', 'oo', 'XX', 'OO', '.', '--'])
+    # hatches = itertools.cycle(['///', '+++', 'oo', 'XX', 'OO', '.', '--'])
 
     fig, ax = plt.subplots(figsize=(12, 5))
     width = 0.4
@@ -209,33 +209,39 @@ def plot_multiple(data_list, plot_path=None, y_lim=(0, 1)):
     x_ticks = [ x * dd for x in x_ticks]
     print(len(x_ticks))
     ax.set_xticks([ x + width * len(data_list)/2 for x in x_ticks])
-
+    colors = ['blue', 'orange', 'teal', 'brown']
+    colors = ['#009E73', '#F0E442', '#0072B2', '#D55E00']
+    colors = ['#D81B60', '#1E88E5', '#FFC107', '#004D40']
+    i = 0
     for data, res_range in data_list:
         print(res_range)
         print(len(data))
         x_ticks = [x+width for x in x_ticks]
         # ax.bar(data.keys(), data.values(), label=f'{res_range}')
-        hatch = next(hatches)
-        bar = ax.bar(x_ticks, data.values(), width, label=f'{res_range} $\AA$')
+        # hatch = next(hatches)
+        bar = ax.bar(x_ticks, data.values(), width, label=f'{res_range} $\AA$', color=colors[i])
         print(bar)
-        for b in bar:
-            b.set_hatch(hatch)
+        i += 1
+        # for b in bar:
+        #     b.set_hatch(hatch)
     ax.legend(prop={'size': 13})
 
-    ax.set_xticklabels(data_list[0][0].keys(), rotation=0)
+    ax.set_xticklabels([i.capitalize() for i in data_list[0][0].keys()], rotation=0)
     ax.set_xlim(-2*width, x_ticks[-1] + 2*width)
     ax.set_ylim(y_lim)
     x = plt.xlabel('Motif type')
-    x.set_fontsize(17)
+    x.set_fontsize(26)
     # ax.set_ylabel('1-correlation')
     y = plt.ylabel('1-correlation')
-    y.set_fontsize(17)
+    y.set_fontsize(26)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=18)
 
     if plot_path is None:
         plt.show()
     else:
         plt.subplots_adjust(bottom=0.15)
-        fig.savefig(plot_path)
+        fig.savefig(plot_path, format='jpg', dpi=600)
 
 
 def plot_multiple_non_av(data_list, plot_path=None, y_lim=(0, 1)):
@@ -297,7 +303,7 @@ def plot_all_average_corr(data_path, out_folder=None, action='mean'):
 
         data_list.append([rot_aver, res_range])
 
-    plot_multiple(data_list, y_lim=(0, 0.3), plot_path=os.path.join(out_folder, 'aver_corr_3+1_one_minus_hatch_final.png'))
+    plot_multiple(data_list, y_lim=(0, 0.3), plot_path=os.path.join(out_folder, 'aver_corr_3+1_one_minus_no_hatch_final1.jpg'))
 
 
 def plot_all_corr(data_path, out_folder=None, action='mean'):
@@ -356,8 +362,8 @@ def plot_grid_similarity(df, plot_path):
     labels = [l + '  ' for l in df.columns]
     plt.xticks(np.arange(0.99, len(df.columns), 1), labels, ha='right')
 
-    plt.tick_params(axis='x', which='major', labelsize=16)
-    plt.tick_params(axis='y', which='major', labelsize=14)
+    plt.tick_params(axis='x', which='major', labelsize=18)
+    plt.tick_params(axis='y', which='major', labelsize=18)
     if plot_path is None:
         plt.show()
     else:

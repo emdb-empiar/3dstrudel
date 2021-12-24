@@ -93,6 +93,7 @@ def dict_list_to_csv(dict_list, csv_path):
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
         for item in dict_list:
+            print(item)
             writer.writerow(item)
 
 
@@ -183,6 +184,7 @@ def csv_to_top_csv(csv_path, out_csv_path, outlier_diff=0.05, score_decimal=5):
             row_d[k.SAME_TYPE_NAME] = None
             row_d[k.SAME_TYPE_CC] = None
             row_d[k.SAME_TYPE_MATRIX] = None
+            row_d[k.M_TOP_MATRIX] = None
             for key, value in tmp.items():
                 if key == row_d[k.RES_TYPE]:
                     row_d[k.SAME_TYPE_NAME] = value[1]
@@ -277,6 +279,7 @@ def csv_to_top_csv_scores_only(csv_path, out_csv_path, outlier_diff=0.05, score_
             max_correlation = -1
             row_d[k.M_TOP_TYPE] = None
             row_d[k.TOP_CC] = None
+            row_d[k.SAME_TYPE_CC] = None
             for key, value in tmp.items():
                 if key == row_d[k.RES_TYPE]:
                     row_d[k.SAME_TYPE_CC] = value[0]

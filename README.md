@@ -1,27 +1,57 @@
-# threed_strudel
-threed_strudel is a set of tools for cryo-EM maps data mining and motif based map-model validation. 
-# Requirements
-biopython, mrcfile, mpi4py, psutil, scipy, ChimeraX, strudel map-motif library (for map-motif validation)
+# threed_strudel (3D-Strudel)
+3D-Strudel is a tool for model-dependent map-feature validation of cryo-EM structures between 2 and 4Å resolution. The Strudel Score is calculated as the linear correlation coefficient between the map values of a rotamer-specific map-motif from the 3D-Strudel motif library and the experimental map values around a target residue.# Sofrware requirements
+### OS Requirements
+This package is supported for *macOS* and *Linux*. The package has been tested on the following systems:
++ macOS: Monterey (12.1)
++ Linux: Red Hat Enterprise Linux (7.4)
+
+### Python Dependencies
+```
+biopython
+mrcfile
+mpi4py
+psutil
+scipy
+```
+### Other dependencies
++ ChimeraX  (1.1 < v <= 2.5)
++ 3D-Strudel motif library (for map-motif validation)
+
+# Tutorials
+[Introduction to map-model validation with Strudel Score](https://ftp.ebi.ac.uk/pub/databases/emdb_vault/strudel_tutorials/introduction_3dstrudel/Introduction_to_3dstrudel.pdf)
+
 # Instalation
     pip install threed_strudel
-
-# Set ChimeraX path
+## Setup
+#### Set ChimeraX path
     strudel_setChimeraX.py path_to_chimeraX_executable 
     
+#### Get 3D-Strudel motif library
+Download and unpack [3D-Strudel motif library](https://ftp.ebi.ac.uk/pub/databases/emdb_vault/strudel_libs/strudel-lib.4_0.5px.tar.gz)
 # Usage
 
-#### Map-model validation with Strudel score
-EM map-model validation based on strudel motif libraries.
-Requires [strudel map-motif libraries](https://ftp.ebi.ac.uk/pub/databases/emdb_vault/strudel_libs/) (e.g. [strudel-libs_ver-3.0_voxel-0.5.tar.gz](https://ftp.ebi.ac.uk/pub/databases/emdb_vault/strudel_libs/strudel-libs_ver-3.0_voxel-0.5.tar.gz)).
-The results can be visualised using the Strudel Score plugin for ChimeraX (https://cxtoolshed.rbvi.ucsf.edu/apps/chimeraxstrudelscore).
+### Map-model validation with Strudel score
 
+    strudel_mapMotifValidation.py -np nr_of_processors -p atomic_model_path -m map_path -l strudel_library_path (e.g. strudel-lib_ver-4.0_voxel-0.5/motifs_2.5-2.8) -o strudel_output_path
 
-    strudel_mapMotifValidation.py -p atomic_model_path -m map_path -l strudel_library_path (e.g. strudel-libs_ver-2.0_voxel-0.5/motifs_2.5-2.8) -o strudel_output_path
+**NOTE:** for best results use the 3D-Strudel motif library resolution bin which includes the target map resolution (e.g. motifs_2.5-2.8 for a 2.6Å resolution map).
+
+**Run time:** ~30 seconds per residue on a single compute core (2.9 GHz intel core i7)
+
 
 To visualize the validation in ChimeraX please install the Strudel score plugin (https://cxtoolshed.rbvi.ucsf.edu/apps/chimeraxstrudelscore) and run:
 
     ChimeraX --cmd 'strudel open strudel_output_path'
+or
+ 
++ Open ChimeraX
++ On the ChimeraX command line type: 
 
+
+    strudel open strudel_output_path
+    
+
+### Other
 Chop an atomic model and the corresponding EM map into amino acid residues:
 
     strudel_chopModelMapMPI.py [options]
@@ -36,12 +66,10 @@ Superimpose and average amino acid residues maps using atom models as guide (req
 
      strudel_mapAveraging.py [options]
      
-# Tutorials
-[Introduction to map-model validation with Strudel Score](https://drive.google.com/file/d/16C2VWWnKsBnaaDd0KlX9Y0mRynPS_qdf/view)
 
     
 # License
 
-threed_strudel is free and open source software released under the terms of the Apache License, Version 2.0. 
+threed_strudel is free and open source software released under the terms of the **Apache License, Version 2.0**. 
 Source code is copyright EMBL-European Bioinformatics Institute (EMBL-EBI) 2017.
     
